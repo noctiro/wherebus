@@ -1,0 +1,13 @@
+/target
+/android/.gradle
+/android/.idea
+/android/app/build
+/android/build
+/android/local.properties
+/android/**/*.iml
+/android/.externalNativeBuild
+/android/.cxx
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 
 class CruxRuntime(
@@ -84,7 +85,10 @@ class CruxRuntime(
         val location = locationProvider.currentLocationOrNull().getOrNull()
         return if (location != null) {
             buildJsonObject {
-                put("Ok", json.encodeToJsonElement(NativeLatLng.serializer(), NativeLatLng(location.first, location.second)))
+                put("Ok", buildJsonArray {
+                    add(JsonPrimitive(location.first))
+                    add(JsonPrimitive(location.second))
+                })
             }.toString()
         } else {
             buildJsonObject {

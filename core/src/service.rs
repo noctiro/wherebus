@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use async_trait::async_trait;
-
 use crate::domain::AppConfig;
 use crate::kernel::RuntimeFacade;
 
@@ -40,7 +38,7 @@ impl Services {
     }
 }
 
-#[async_trait]
+#[allow(refining_impl_trait)]
 impl QueryService for Services {
     async fn available_services(&self) -> Vec<ServiceInfo> {
         self.with_inner(|inner| inner.available_services())
@@ -91,7 +89,7 @@ impl QueryService for Services {
     }
 }
 
-#[async_trait]
+#[allow(refining_impl_trait)]
 impl ManageService for Services {
     async fn load_config(&self) -> Result<AppConfig, ManageError> {
         let inner = self.clone_inner();

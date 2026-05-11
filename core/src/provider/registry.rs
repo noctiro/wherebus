@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::domain::transit::{BusRoute, LineDetail, LineSummary, RealTimeData, Station};
 use crate::models::City;
-use crate::provider::{ProviderError, BusDataProvider};
-use crate::domain::transit::{Station, LineSummary, LineDetail, RealTimeData, BusRoute};
+use crate::provider::{BusDataProvider, ProviderError};
 
 #[cfg(debug_assertions)]
 use super::debug;
@@ -76,19 +76,32 @@ struct NullProvider;
 
 #[async_trait]
 impl BusDataProvider for NullProvider {
-    fn provider_name(&self) -> &str { "" }
-    fn city_name(&self) -> &str { "" }
+    fn provider_name(&self) -> &str {
+        ""
+    }
+    fn city_name(&self) -> &str {
+        ""
+    }
 
     async fn nearby_stations(&self, _lat: f64, _lng: f64) -> Result<Vec<Station>, ProviderError> {
         Ok(vec![])
     }
-    async fn station_lines(&self, _station: &str, _lat: f64, _lng: f64) -> Result<Vec<LineSummary>, ProviderError> {
+    async fn station_lines(
+        &self,
+        _station: &str,
+        _lat: f64,
+        _lng: f64,
+    ) -> Result<Vec<LineSummary>, ProviderError> {
         Ok(vec![])
     }
     async fn line_detail(&self, _key: &str) -> Result<LineDetail, ProviderError> {
         Err(ProviderError::Server("未选择数据源".into()))
     }
-    async fn realtime(&self, _key: &str, _target_order: u32) -> Result<RealTimeData, ProviderError> {
+    async fn realtime(
+        &self,
+        _key: &str,
+        _target_order: u32,
+    ) -> Result<RealTimeData, ProviderError> {
         Err(ProviderError::Server("未选择数据源".into()))
     }
     async fn all_lines(&self) -> Result<Vec<BusRoute>, ProviderError> {

@@ -21,23 +21,16 @@ pub struct DebugParams {
 
 impl Default for DebugParams {
     fn default() -> Self {
-        Self { density: 0.8, congestion: 0.3, crowding: 0.4, offline: 0.0 }
+        Self {
+            density: 0.8,
+            congestion: 0.3,
+            crowding: 0.4,
+            offline: 0.0,
+        }
     }
 }
 
 impl DebugParams {
-    pub fn rush_hour() -> Self {
-        Self { density: 0.9, congestion: 0.85, crowding: 0.9, offline: 0.0 }
-    }
-
-    pub fn late_night() -> Self {
-        Self { density: 0.1, congestion: 0.0, crowding: 0.05, offline: 0.0 }
-    }
-
-    pub fn no_service() -> Self {
-        Self { density: 0.0, congestion: 0.0, crowding: 0.0, offline: 1.0 }
-    }
-
     fn clamp(v: f32) -> f32 {
         v.clamp(0.0, 1.0)
     }
@@ -71,7 +64,9 @@ impl Rng {
     }
 
     fn range(&mut self, min: u64, max: u64) -> u64 {
-        if min >= max { return min; }
+        if min >= max {
+            return min;
+        }
         min + self.next() % (max - min + 1)
     }
 
@@ -123,117 +118,439 @@ struct SimStop {
 // - 全覆盖中心: 39.9100, 116.3800（命中大部分线路）
 const ROUTES: &[SimRoute] = &[
     SimRoute {
-        id: "dbg_line_1", name: "1路", dir_id: "dbg_dir_1", reverse_id: "dbg_dir_2",
-        origin: "老山公交场站", origin_alias: Some("老山"),
-        terminus: "四惠枢纽站", terminus_alias: Some("四惠东"),
+        id: "dbg_line_1",
+        name: "1路",
+        dir_id: "dbg_dir_1",
+        reverse_id: "dbg_dir_2",
+        origin: "老山公交场站",
+        origin_alias: Some("老山"),
+        terminus: "四惠枢纽站",
+        terminus_alias: Some("四惠东"),
         company: "北京公交集团第四客运分公司",
-        first_service: "05:00", last_service: "23:00",
-        fare: "2元", contact: "010-96166",
+        first_service: "05:00",
+        last_service: "23:00",
+        fare: "2元",
+        contact: "010-96166",
         notes: Some("冬季末班提前至22:30"),
         stops: &ROUTE1_STOPS,
     },
     SimRoute {
-        id: "dbg_line_2", name: "52路", dir_id: "dbg_dir_3", reverse_id: "dbg_dir_4",
-        origin: "平乐园", origin_alias: None,
-        terminus: "西直门", terminus_alias: Some("西直门外"),
+        id: "dbg_line_2",
+        name: "52路",
+        dir_id: "dbg_dir_3",
+        reverse_id: "dbg_dir_4",
+        origin: "平乐园",
+        origin_alias: None,
+        terminus: "西直门",
+        terminus_alias: Some("西直门外"),
         company: "北京公交集团第三客运分公司",
-        first_service: "05:30", last_service: "22:00",
-        fare: "2元", contact: "010-96166",
+        first_service: "05:30",
+        last_service: "22:00",
+        fare: "2元",
+        contact: "010-96166",
         notes: None,
         stops: &ROUTE2_STOPS,
     },
     SimRoute {
-        id: "dbg_line_3", name: "特8路", dir_id: "dbg_dir_5", reverse_id: "dbg_dir_6",
-        origin: "颐和园", origin_alias: Some("颐和园北宫门"),
-        terminus: "前门", terminus_alias: Some("前门西"),
+        id: "dbg_line_3",
+        name: "特8路",
+        dir_id: "dbg_dir_5",
+        reverse_id: "dbg_dir_6",
+        origin: "颐和园",
+        origin_alias: Some("颐和园北宫门"),
+        terminus: "前门",
+        terminus_alias: Some("前门西"),
         company: "北京公交集团第一客运分公司",
-        first_service: "06:00", last_service: "21:30",
-        fare: "3元起步", contact: "010-96166",
+        first_service: "06:00",
+        last_service: "21:30",
+        fare: "3元起步",
+        contact: "010-96166",
         notes: Some("分段计价，全程5元"),
         stops: &ROUTE3_STOPS,
     },
     SimRoute {
-        id: "dbg_line_4", name: "夜1路", dir_id: "dbg_dir_7", reverse_id: "dbg_dir_8",
-        origin: "老山公交场站", origin_alias: Some("老山"),
-        terminus: "四惠枢纽站", terminus_alias: Some("四惠东"),
+        id: "dbg_line_4",
+        name: "夜1路",
+        dir_id: "dbg_dir_7",
+        reverse_id: "dbg_dir_8",
+        origin: "老山公交场站",
+        origin_alias: Some("老山"),
+        terminus: "四惠枢纽站",
+        terminus_alias: Some("四惠东"),
         company: "北京公交集团第四客运分公司",
-        first_service: "23:20", last_service: "04:50",
-        fare: "2元", contact: "010-96166",
+        first_service: "23:20",
+        last_service: "04:50",
+        fare: "2元",
+        contact: "010-96166",
         notes: Some("夜间线路，与1路走向相同"),
         stops: &ROUTE4_STOPS,
     },
     SimRoute {
-        id: "dbg_line_5", name: "快速直达专线1", dir_id: "dbg_dir_9", reverse_id: "dbg_dir_10",
-        origin: "望京西", origin_alias: Some("望京西交通枢纽"),
-        terminus: "北京西站", terminus_alias: Some("北京西站南广场"),
+        id: "dbg_line_5",
+        name: "快速直达专线1",
+        dir_id: "dbg_dir_9",
+        reverse_id: "dbg_dir_10",
+        origin: "望京西",
+        origin_alias: Some("望京西交通枢纽"),
+        terminus: "北京西站",
+        terminus_alias: Some("北京西站南广场"),
         company: "北京公交集团快速公交分公司",
-        first_service: "06:30", last_service: "20:00",
-        fare: "5元", contact: "010-96166",
+        first_service: "06:30",
+        last_service: "20:00",
+        fare: "5元",
+        contact: "010-96166",
         notes: Some("中途不停站，直达"),
         stops: &ROUTE5_STOPS,
     },
 ];
 
 const ROUTE1_STOPS: [SimStop; 10] = [
-    SimStop { id: "s1_01", name: "老山公交场站", alias: Some("老山"), lat: 39.9042, lng: 116.2365, status: StopStatus::Normal },
-    SimStop { id: "s1_02", name: "八角游乐园", alias: None, lat: 39.9058, lng: 116.2580, status: StopStatus::Normal },
-    SimStop { id: "s1_03", name: "玉泉路", alias: Some("玉泉路口西"), lat: 39.9065, lng: 116.2830, status: StopStatus::Normal },
-    SimStop { id: "s1_04", name: "公主坟", alias: Some("公主坟北"), lat: 39.9072, lng: 116.3120, status: StopStatus::Normal },
-    SimStop { id: "s1_05", name: "军事博物馆", alias: None, lat: 39.9078, lng: 116.3380, status: StopStatus::BoardOnly },
-    SimStop { id: "s1_06", name: "木樨地", alias: None, lat: 39.9080, lng: 116.3560, status: StopStatus::Normal },
-    SimStop { id: "s1_07", name: "天安门西", alias: None, lat: 39.9085, lng: 116.3910, status: StopStatus::Normal },
-    SimStop { id: "s1_08", name: "天安门东", alias: Some("天安门东站"), lat: 39.9087, lng: 116.4074, status: StopStatus::Normal },
-    SimStop { id: "s1_09", name: "王府井", alias: Some("王府井百货"), lat: 39.9133, lng: 116.4107, status: StopStatus::AlightOnly },
-    SimStop { id: "s1_10", name: "四惠枢纽站", alias: Some("四惠东"), lat: 39.9082, lng: 116.4928, status: StopStatus::Normal },
+    SimStop {
+        id: "s1_01",
+        name: "老山公交场站",
+        alias: Some("老山"),
+        lat: 39.9042,
+        lng: 116.2365,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_02",
+        name: "八角游乐园",
+        alias: None,
+        lat: 39.9058,
+        lng: 116.2580,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_03",
+        name: "玉泉路",
+        alias: Some("玉泉路口西"),
+        lat: 39.9065,
+        lng: 116.2830,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_04",
+        name: "公主坟",
+        alias: Some("公主坟北"),
+        lat: 39.9072,
+        lng: 116.3120,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_05",
+        name: "军事博物馆",
+        alias: None,
+        lat: 39.9078,
+        lng: 116.3380,
+        status: StopStatus::BoardOnly,
+    },
+    SimStop {
+        id: "s1_06",
+        name: "木樨地",
+        alias: None,
+        lat: 39.9080,
+        lng: 116.3560,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_07",
+        name: "天安门西",
+        alias: None,
+        lat: 39.9085,
+        lng: 116.3910,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_08",
+        name: "天安门东",
+        alias: Some("天安门东站"),
+        lat: 39.9087,
+        lng: 116.4074,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s1_09",
+        name: "王府井",
+        alias: Some("王府井百货"),
+        lat: 39.9133,
+        lng: 116.4107,
+        status: StopStatus::AlightOnly,
+    },
+    SimStop {
+        id: "s1_10",
+        name: "四惠枢纽站",
+        alias: Some("四惠东"),
+        lat: 39.9082,
+        lng: 116.4928,
+        status: StopStatus::Normal,
+    },
 ];
 
 const ROUTE2_STOPS: [SimStop; 9] = [
-    SimStop { id: "s2_01", name: "平乐园", alias: None, lat: 39.8750, lng: 116.4820, status: StopStatus::Normal },
-    SimStop { id: "s2_02", name: "劲松", alias: Some("劲松桥东"), lat: 39.8820, lng: 116.4530, status: StopStatus::Normal },
-    SimStop { id: "s2_03", name: "双井", alias: None, lat: 39.8990, lng: 116.4580, status: StopStatus::Normal },
-    SimStop { id: "s2_04", name: "国贸", alias: Some("国贸桥"), lat: 39.9080, lng: 116.4600, status: StopStatus::Temporary },
-    SimStop { id: "s2_05", name: "东单", alias: Some("东单路口北"), lat: 39.9148, lng: 116.4162, status: StopStatus::OnDemand },
-    SimStop { id: "s2_06", name: "灯市口", alias: None, lat: 39.9180, lng: 116.4100, status: StopStatus::Normal },
-    SimStop { id: "s2_07", name: "西四", alias: None, lat: 39.9260, lng: 116.3720, status: StopStatus::Normal },
-    SimStop { id: "s2_08", name: "新街口", alias: Some("新街口豁口"), lat: 39.9350, lng: 116.3620, status: StopStatus::Normal },
-    SimStop { id: "s2_09", name: "西直门", alias: Some("西直门外"), lat: 39.9420, lng: 116.3530, status: StopStatus::Normal },
+    SimStop {
+        id: "s2_01",
+        name: "平乐园",
+        alias: None,
+        lat: 39.8750,
+        lng: 116.4820,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_02",
+        name: "劲松",
+        alias: Some("劲松桥东"),
+        lat: 39.8820,
+        lng: 116.4530,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_03",
+        name: "双井",
+        alias: None,
+        lat: 39.8990,
+        lng: 116.4580,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_04",
+        name: "国贸",
+        alias: Some("国贸桥"),
+        lat: 39.9080,
+        lng: 116.4600,
+        status: StopStatus::Temporary,
+    },
+    SimStop {
+        id: "s2_05",
+        name: "东单",
+        alias: Some("东单路口北"),
+        lat: 39.9148,
+        lng: 116.4162,
+        status: StopStatus::OnDemand,
+    },
+    SimStop {
+        id: "s2_06",
+        name: "灯市口",
+        alias: None,
+        lat: 39.9180,
+        lng: 116.4100,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_07",
+        name: "西四",
+        alias: None,
+        lat: 39.9260,
+        lng: 116.3720,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_08",
+        name: "新街口",
+        alias: Some("新街口豁口"),
+        lat: 39.9350,
+        lng: 116.3620,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s2_09",
+        name: "西直门",
+        alias: Some("西直门外"),
+        lat: 39.9420,
+        lng: 116.3530,
+        status: StopStatus::Normal,
+    },
 ];
 
 const ROUTE3_STOPS: [SimStop; 8] = [
-    SimStop { id: "s3_01", name: "颐和园", alias: Some("颐和园北宫门"), lat: 40.0000, lng: 116.2750, status: StopStatus::Normal },
-    SimStop { id: "s3_02", name: "北京大学西门", alias: Some("北大西门"), lat: 39.9920, lng: 116.2980, status: StopStatus::Normal },
-    SimStop { id: "s3_03", name: "中关村", alias: Some("中关村南"), lat: 39.9800, lng: 116.3100, status: StopStatus::Normal },
-    SimStop { id: "s3_04", name: "白石桥", alias: None, lat: 39.9550, lng: 116.3250, status: StopStatus::Express },
-    SimStop { id: "s3_05", name: "甘家口", alias: None, lat: 39.9300, lng: 116.3350, status: StopStatus::Express },
-    SimStop { id: "s3_06", name: "复兴门", alias: None, lat: 39.9080, lng: 116.3560, status: StopStatus::Normal },
-    SimStop { id: "s3_07", name: "西单", alias: Some("西单商场"), lat: 39.9080, lng: 116.3730, status: StopStatus::Normal },
-    SimStop { id: "s3_08", name: "前门", alias: Some("前门西"), lat: 39.8990, lng: 116.3970, status: StopStatus::Normal },
+    SimStop {
+        id: "s3_01",
+        name: "颐和园",
+        alias: Some("颐和园北宫门"),
+        lat: 40.0000,
+        lng: 116.2750,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s3_02",
+        name: "北京大学西门",
+        alias: Some("北大西门"),
+        lat: 39.9920,
+        lng: 116.2980,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s3_03",
+        name: "中关村",
+        alias: Some("中关村南"),
+        lat: 39.9800,
+        lng: 116.3100,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s3_04",
+        name: "白石桥",
+        alias: None,
+        lat: 39.9550,
+        lng: 116.3250,
+        status: StopStatus::Express,
+    },
+    SimStop {
+        id: "s3_05",
+        name: "甘家口",
+        alias: None,
+        lat: 39.9300,
+        lng: 116.3350,
+        status: StopStatus::Express,
+    },
+    SimStop {
+        id: "s3_06",
+        name: "复兴门",
+        alias: None,
+        lat: 39.9080,
+        lng: 116.3560,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s3_07",
+        name: "西单",
+        alias: Some("西单商场"),
+        lat: 39.9080,
+        lng: 116.3730,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s3_08",
+        name: "前门",
+        alias: Some("前门西"),
+        lat: 39.8990,
+        lng: 116.3970,
+        status: StopStatus::Normal,
+    },
 ];
 
 const ROUTE4_STOPS: [SimStop; 6] = [
-    SimStop { id: "s4_01", name: "老山公交场站", alias: Some("老山"), lat: 39.9042, lng: 116.2365, status: StopStatus::Normal },
-    SimStop { id: "s4_02", name: "公主坟", alias: Some("公主坟北"), lat: 39.9072, lng: 116.3120, status: StopStatus::Normal },
-    SimStop { id: "s4_03", name: "军事博物馆", alias: None, lat: 39.9078, lng: 116.3380, status: StopStatus::Normal },
-    SimStop { id: "s4_04", name: "天安门西", alias: None, lat: 39.9085, lng: 116.3910, status: StopStatus::NotStopping },
-    SimStop { id: "s4_05", name: "天安门东", alias: Some("天安门东站"), lat: 39.9087, lng: 116.4074, status: StopStatus::NotStopping },
-    SimStop { id: "s4_06", name: "四惠枢纽站", alias: Some("四惠东"), lat: 39.9082, lng: 116.4928, status: StopStatus::Normal },
+    SimStop {
+        id: "s4_01",
+        name: "老山公交场站",
+        alias: Some("老山"),
+        lat: 39.9042,
+        lng: 116.2365,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s4_02",
+        name: "公主坟",
+        alias: Some("公主坟北"),
+        lat: 39.9072,
+        lng: 116.3120,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s4_03",
+        name: "军事博物馆",
+        alias: None,
+        lat: 39.9078,
+        lng: 116.3380,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s4_04",
+        name: "天安门西",
+        alias: None,
+        lat: 39.9085,
+        lng: 116.3910,
+        status: StopStatus::NotStopping,
+    },
+    SimStop {
+        id: "s4_05",
+        name: "天安门东",
+        alias: Some("天安门东站"),
+        lat: 39.9087,
+        lng: 116.4074,
+        status: StopStatus::NotStopping,
+    },
+    SimStop {
+        id: "s4_06",
+        name: "四惠枢纽站",
+        alias: Some("四惠东"),
+        lat: 39.9082,
+        lng: 116.4928,
+        status: StopStatus::Normal,
+    },
 ];
 
 const ROUTE5_STOPS: [SimStop; 4] = [
-    SimStop { id: "s5_01", name: "望京西", alias: Some("望京西交通枢纽"), lat: 39.9900, lng: 116.4680, status: StopStatus::Normal },
-    SimStop { id: "s5_02", name: "大望路", alias: None, lat: 39.9085, lng: 116.4620, status: StopStatus::Express },
-    SimStop { id: "s5_03", name: "北京西站南广场", alias: Some("西站南"), lat: 39.8950, lng: 116.3220, status: StopStatus::Express },
-    SimStop { id: "s5_04", name: "北京西站", alias: Some("北京西站南广场"), lat: 39.8960, lng: 116.3200, status: StopStatus::Normal },
+    SimStop {
+        id: "s5_01",
+        name: "望京西",
+        alias: Some("望京西交通枢纽"),
+        lat: 39.9900,
+        lng: 116.4680,
+        status: StopStatus::Normal,
+    },
+    SimStop {
+        id: "s5_02",
+        name: "大望路",
+        alias: None,
+        lat: 39.9085,
+        lng: 116.4620,
+        status: StopStatus::Express,
+    },
+    SimStop {
+        id: "s5_03",
+        name: "北京西站南广场",
+        alias: Some("西站南"),
+        lat: 39.8950,
+        lng: 116.3220,
+        status: StopStatus::Express,
+    },
+    SimStop {
+        id: "s5_04",
+        name: "北京西站",
+        alias: Some("北京西站南广场"),
+        lat: 39.8960,
+        lng: 116.3200,
+        status: StopStatus::Normal,
+    },
 ];
 
 const BUS_PLATES: &[&str] = &[
-    "京A00001", "京A00002", "京A00003", "京A12345", "京B10086",
-    "京B10087", "京B20088", "京C20001", "京C20002", "京C30003",
-    "京D30001", "京D30002", "京D40004", "京E40001", "京E50005",
-    "京F50006", "京F50007", "京G60008", "京G60009", "京H70010",
-    "京H70011", "京J80012", "京J80013", "京K90014", "京K90015",
-    "京L01001", "京L01002", "京M02003", "京M02004", "京N03005",
-    "京N03006", "京P04007", "京P04008", "京Q05009", "京Q05010",
+    "京A00001",
+    "京A00002",
+    "京A00003",
+    "京A12345",
+    "京B10086",
+    "京B10087",
+    "京B20088",
+    "京C20001",
+    "京C20002",
+    "京C30003",
+    "京D30001",
+    "京D30002",
+    "京D40004",
+    "京E40001",
+    "京E50005",
+    "京F50006",
+    "京F50007",
+    "京G60008",
+    "京G60009",
+    "京H70010",
+    "京H70011",
+    "京J80012",
+    "京J80013",
+    "京K90014",
+    "京K90015",
+    "京L01001",
+    "京L01002",
+    "京M02003",
+    "京M02004",
+    "京N03005",
+    "京N03006",
+    "京P04007",
+    "京P04008",
+    "京Q05009",
+    "京Q05010",
 ];
 
 pub struct DebugProvider {
@@ -242,13 +559,16 @@ pub struct DebugProvider {
 
 impl DebugProvider {
     pub fn new(params: DebugParams) -> Self {
-        Self { params: params.normalized() }
+        Self {
+            params: params.normalized(),
+        }
     }
 }
 
 impl DebugProvider {
     fn find_route(key: &str) -> &'static SimRoute {
-        ROUTES.iter()
+        ROUTES
+            .iter()
             .find(|r| r.id == key || r.dir_id == key || r.reverse_id == key)
             .unwrap_or(&ROUTES[0])
     }
@@ -263,12 +583,28 @@ impl DebugProvider {
 
         let t = time_secs();
         let hour = ((t / 3600) % 24) as u32;
-        let first_h: u32 = route.first_service.split(':').next().unwrap_or("5").parse().unwrap_or(5);
-        let last_h: u32 = route.last_service.split(':').next().unwrap_or("23").parse().unwrap_or(23);
+        let first_h: u32 = route
+            .first_service
+            .split(':')
+            .next()
+            .unwrap_or("5")
+            .parse()
+            .unwrap_or(5);
+        let last_h: u32 = route
+            .last_service
+            .split(':')
+            .next()
+            .unwrap_or("23")
+            .parse()
+            .unwrap_or(23);
 
         if first_h < last_h {
-            if hour < first_h { return RunState::NotOperating; }
-            if hour >= last_h { return RunState::Stopped; }
+            if hour < first_h {
+                return RunState::NotOperating;
+            }
+            if hour >= last_h {
+                return RunState::Stopped;
+            }
         }
         RunState::Running
     }
@@ -340,7 +676,11 @@ impl DebugProvider {
             let dist = ((stop.lat - lat).powi(2) + (stop.lng - lng).powi(2)).sqrt() * 111_000.0;
             let base_speed = 4.0 + (1.0 - self.params.congestion as f64) * 12.0;
             let speed_mps = base_speed + rng.float() * 4.0;
-            let travel_secs = if dist < 1.0 { 0 } else { (dist / speed_mps) as u32 };
+            let travel_secs = if dist < 1.0 {
+                0
+            } else {
+                (dist / speed_mps) as u32
+            };
 
             let dy = stop.lat - prev.lat;
             let dx = stop.lng - prev.lng;
@@ -378,37 +718,66 @@ impl DebugProvider {
 
     fn sim_segments(&self, route: &SimRoute, rng: &mut Rng) -> Vec<RouteSegment> {
         let n = route.stops.len();
-        (0..n.saturating_sub(1)).map(|i| {
-            let s1 = &route.stops[i];
-            let s2 = &route.stops[i + 1];
-            let dist = ((s2.lat - s1.lat).powi(2) + (s2.lng - s1.lng).powi(2)).sqrt() * 111_000.0;
-            let base_speed = 10.0 + (1.0 - self.params.congestion as f64) * 38.0;
-            let speed = base_speed + rng.float() * 8.0;
-            let cong = self.pick_congestion(rng);
-            RouteSegment { distance: Some(dist), speed: Some(speed), congestion: cong }
-        }).collect()
-    }
-
-    fn sim_station_arrivals(&self, route: &SimRoute, buses: &[BusPosition], rng: &mut Rng) -> Vec<StationArrival> {
-        let n = route.stops.len();
-        (1..=n).filter_map(|idx| {
-            let arriving = buses.iter().filter(|b| b.station_index == idx as u32 && b.is_arriving).count() as u32;
-            let leaving = buses.iter().filter(|b| b.station_index == idx as u32 && !b.is_arriving).count() as u32;
-            let extra_arriving = if rng.range(0, 4) == 0 { 1 } else { 0 };
-            let total_arriving = arriving + extra_arriving;
-            if total_arriving == 0 && leaving == 0 { return None; }
-            Some(StationArrival {
-                station_index: idx as u32,
-                station_name: Some(route.stops[idx - 1].name.into()),
-                arriving_count: total_arriving,
-                leaving_count: leaving,
+        (0..n.saturating_sub(1))
+            .map(|i| {
+                let s1 = &route.stops[i];
+                let s2 = &route.stops[i + 1];
+                let dist =
+                    ((s2.lat - s1.lat).powi(2) + (s2.lng - s1.lng).powi(2)).sqrt() * 111_000.0;
+                let base_speed = 10.0 + (1.0 - self.params.congestion as f64) * 38.0;
+                let speed = base_speed + rng.float() * 8.0;
+                let cong = self.pick_congestion(rng);
+                RouteSegment {
+                    distance: Some(dist),
+                    speed: Some(speed),
+                    congestion: cong,
+                }
             })
-        }).collect()
+            .collect()
     }
 
-    fn sim_arrival_estimates(&self, route: &SimRoute, target_order: u32, rng: &mut Rng) -> Vec<ArrivalDetail> {
+    fn sim_station_arrivals(
+        &self,
+        route: &SimRoute,
+        buses: &[BusPosition],
+        rng: &mut Rng,
+    ) -> Vec<StationArrival> {
+        let n = route.stops.len();
+        (1..=n)
+            .filter_map(|idx| {
+                let arriving = buses
+                    .iter()
+                    .filter(|b| b.station_index == idx as u32 && b.is_arriving)
+                    .count() as u32;
+                let leaving = buses
+                    .iter()
+                    .filter(|b| b.station_index == idx as u32 && !b.is_arriving)
+                    .count() as u32;
+                let extra_arriving = if rng.range(0, 4) == 0 { 1 } else { 0 };
+                let total_arriving = arriving + extra_arriving;
+                if total_arriving == 0 && leaving == 0 {
+                    return None;
+                }
+                Some(StationArrival {
+                    station_index: idx as u32,
+                    station_name: Some(route.stops[idx - 1].name.into()),
+                    arriving_count: total_arriving,
+                    leaving_count: leaving,
+                })
+            })
+            .collect()
+    }
+
+    fn sim_arrival_estimates(
+        &self,
+        route: &SimRoute,
+        target_order: u32,
+        rng: &mut Rng,
+    ) -> Vec<ArrivalDetail> {
         let n = route.stops.len() as u32;
-        if target_order == 0 || target_order > n { return vec![]; }
+        if target_order == 0 || target_order > n {
+            return vec![];
+        }
 
         let count = (1.0 + self.params.density * 5.0) as u64;
         let bus_count = rng.range(1, count.max(2));
@@ -417,7 +786,9 @@ impl DebugProvider {
 
         for _ in 0..bus_count {
             let away = prev_away + rng.range(1, 4) as u32;
-            if away >= target_order { break; }
+            if away >= target_order {
+                break;
+            }
             let dist_per_stop = rng.range(300, 1200) as u32;
             let speed_factor = 1.0 + self.params.congestion * 2.0;
             let min_per_stop = (speed_factor * rng.range(1, 3) as f32) as u32;
@@ -453,8 +824,12 @@ impl DebugProvider {
 
 #[async_trait]
 impl BusDataProvider for DebugProvider {
-    fn provider_name(&self) -> &str { "Debug" }
-    fn city_name(&self) -> &str { "北京" }
+    fn provider_name(&self) -> &str {
+        "Debug"
+    }
+    fn city_name(&self) -> &str {
+        "北京"
+    }
 
     async fn nearby_stations(&self, lat: f64, lng: f64) -> Result<Vec<Station>, ProviderError> {
         let mut rng = Rng::from_time();
@@ -497,9 +872,14 @@ impl BusDataProvider for DebugProvider {
         let mut lines = Vec::new();
 
         for route in ROUTES {
-            let found = route.stops.iter().enumerate()
+            let found = route
+                .stops
+                .iter()
+                .enumerate()
                 .find(|(_, s)| s.name == station || s.id == station);
-            let Some((idx, _)) = found else { continue; };
+            let Some((idx, _)) = found else {
+                continue;
+            };
 
             let run_state = self.sim_run_state(route, &mut rng);
             let arrival = match run_state {
@@ -543,8 +923,11 @@ impl BusDataProvider for DebugProvider {
 
     async fn line_detail(&self, key: &str) -> Result<LineDetail, ProviderError> {
         let route = Self::find_route(key);
-        let stops: Vec<LineStop> = route.stops.iter().enumerate().map(|(i, s)| {
-            LineStop {
+        let stops: Vec<LineStop> = route
+            .stops
+            .iter()
+            .enumerate()
+            .map(|(i, s)| LineStop {
                 id: Some(s.id.into()),
                 name: s.name.into(),
                 alias: s.alias.map(Into::into),
@@ -553,8 +936,8 @@ impl BusDataProvider for DebugProvider {
                 lng: s.lng,
                 status: s.status,
                 track_index: Some((i * 4) as u32),
-            }
-        }).collect();
+            })
+            .collect();
 
         let track_points = Self::interpolate_track(route);
 
@@ -580,11 +963,7 @@ impl BusDataProvider for DebugProvider {
         })
     }
 
-    async fn realtime(
-        &self,
-        key: &str,
-        target_order: u32,
-    ) -> Result<RealTimeData, ProviderError> {
+    async fn realtime(&self, key: &str, target_order: u32) -> Result<RealTimeData, ProviderError> {
         let route = Self::find_route(key);
         let mut rng = Rng::from_time();
 
@@ -616,18 +995,21 @@ impl BusDataProvider for DebugProvider {
     }
 
     async fn all_lines(&self) -> Result<Vec<BusRoute>, ProviderError> {
-        Ok(ROUTES.iter().map(|r| BusRoute {
-            id: Some(r.id.into()),
-            name: r.name.into(),
-            direction_id: r.dir_id.into(),
-            terminals: (Terminal::named(r.origin), Terminal::named(r.terminus)),
-            endpoints: EndpointsView {
-                origin: r.origin.into(),
-                origin_alias: r.origin_alias.map(Into::into),
-                terminus: r.terminus.into(),
-                terminus_alias: r.terminus_alias.map(Into::into),
-            },
-            company: Some(r.company.into()),
-        }).collect())
+        Ok(ROUTES
+            .iter()
+            .map(|r| BusRoute {
+                id: Some(r.id.into()),
+                name: r.name.into(),
+                direction_id: r.dir_id.into(),
+                terminals: (Terminal::named(r.origin), Terminal::named(r.terminus)),
+                endpoints: EndpointsView {
+                    origin: r.origin.into(),
+                    origin_alias: r.origin_alias.map(Into::into),
+                    terminus: r.terminus.into(),
+                    terminus_alias: r.terminus_alias.map(Into::into),
+                },
+                company: Some(r.company.into()),
+            })
+            .collect())
     }
 }

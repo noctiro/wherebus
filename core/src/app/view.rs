@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::domain::{EndpointsView, NearbyLineView, NearbyStationView, NetworkState};
 use crate::models::{CongestionLevel, CrowdLevel, RunState, StopStatus};
-use crate::domain::{NearbyLineView, NearbyStationView, NetworkState, EndpointsView};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppView {

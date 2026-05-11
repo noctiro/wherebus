@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{LineDetail, RealTimeData, RunState, EndpointsView};
+use super::{EndpointsView, LineDetail, RealTimeData, RunState};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceInfo {

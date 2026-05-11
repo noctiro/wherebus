@@ -11,10 +11,10 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 anyhow = "1"
+async-trait = "0.1"
 crux_core = "0.18.0"
 dirs = "6"
-async-trait = "0.1.89"
-futures = "0.3"
+futures-util = "0.3"
 redb = "4"
 reqwest = { version = "0.13.3", default-features = false, features = ["json", "rustls-no-provider", "query", "form"] }
 rustls = "0.23"
@@ -30,7 +30,7 @@ md-5 = "0.11"
 aes = "0.9"
 base64 = "0.22"
 ecb = { version = "0.2", features = ["alloc"] }
-tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["registry", "fmt"] }
 tracing-android = "0.2"
 zstd = "0.13"
 jni = { version = "0.22", default-features = false }

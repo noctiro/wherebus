@@ -5,11 +5,11 @@ use super::cache::{Freshness, TypedCache};
 use super::connectivity::{ConnectivityTracker, NetState};
 use super::storage::Storage;
 use super::storage::tables;
-use crate::models::*;
 use crate::domain::{
-    CacheCategory, CacheStats, LineDetailSnapshot, NearbyGroup, NearbyLineView,
-    NearbySnapshot, NearbyStationView, NetworkState, ServiceInfo,
+    CacheCategory, CacheStats, LineDetailSnapshot, NearbyGroup, NearbyLineView, NearbySnapshot,
+    NearbyStationView, NetworkState, ServiceInfo,
 };
+use crate::models::*;
 use crate::providers::{self, BusDataProvider, ProviderError};
 use redb::TableDefinition;
 
@@ -162,19 +162,12 @@ impl RuntimeFacade {
         Ok(())
     }
 
-    pub fn clear_cache_category(
-        &self,
-        category: CacheCategory,
-    ) -> anyhow::Result<()> {
+    pub fn clear_cache_category(&self, category: CacheCategory) -> anyhow::Result<()> {
         self.clear_category(category);
         Ok(())
     }
 
-    pub async fn nearby_snapshot(
-        &self,
-        lat: f64,
-        lng: f64,
-    ) -> Result<NearbySnapshot, String> {
+    pub async fn nearby_snapshot(&self, lat: f64, lng: f64) -> Result<NearbySnapshot, String> {
         let stations = self
             .nearby_stations(lat, lng)
             .await
@@ -186,7 +179,7 @@ impl RuntimeFacade {
             .iter()
             .map(|station| self.station_lines(&station.name, station.lat, station.lng))
             .collect();
-        let results = futures::future::join_all(futs).await;
+        let results = futures_util::future::join_all(futs).await;
 
         let all_routes = self.all_lines.get("all");
 
@@ -207,18 +200,18 @@ impl RuntimeFacade {
             if let Some(ref cached_routes) = all_routes {
                 for line in lines.iter_mut() {
                     if line.endpoints.origin.is_empty() {
-                        if let Some(route) = cached_routes.data.iter().find(|r| r.direction_id == line.direction_id) {
+                        if let Some(route) = cached_routes
+                            .data
+                            .iter()
+                            .find(|r| r.direction_id == line.direction_id)
+                        {
                             line.endpoints = route.endpoints.clone();
                         }
                     }
                 }
             }
 
-            tracing::debug!(
-                "[nearby] {} → {} lines",
-                station.name,
-                lines.len()
-            );
+            tracing::debug!("[nearby] {} → {} lines", station.name, lines.len());
 
             lines.sort_by(|a, b| {
                 let a_running = a.run_state == RunState::Running;
@@ -233,7 +226,9 @@ impl RuntimeFacade {
             for line in lines.iter().take(3) {
                 tracing::debug!(
                     "[nearby]   sorted: {} {:?} score={}",
-                    line.name, line.arrival, line.arrival.proximity_score()
+                    line.name,
+                    line.arrival,
+                    line.arrival.proximity_score()
                 );
             }
 
@@ -277,11 +272,7 @@ impl RuntimeFacade {
         Ok(NearbySnapshot { groups })
     }
 
-    pub async fn refresh_nearby(
-        &self,
-        lat: f64,
-        lng: f64,
-    ) -> Result<NearbySnapshot, String> {
+    pub async fn refresh_nearby(&self, lat: f64, lng: f64) -> Result<NearbySnapshot, String> {
         tracing::debug!("[nearby] refresh_nearby: invalidating caches");
         self.stations.invalidate(&format!("{:.4},{:.4}", lat, lng));
         self.lines.clear();
@@ -390,10 +381,7 @@ impl RuntimeFacade {
         .await
     }
 
-    pub async fn line_detail(
-        &self,
-        direction_id: &str,
-    ) -> Result<LineDetail, ProviderError> {
+    pub async fn line_detail(&self, direction_id: &str) -> Result<LineDetail, ProviderError> {
         if let Some(cached) = self.detail.get(direction_id) {
             if cached.freshness == Freshness::Fresh && !self.detail.needs_refresh(direction_id) {
                 return Ok(cached.data);

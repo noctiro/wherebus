@@ -29,14 +29,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters += listOf(
-                "arm64-v8a",
-                "armeabi-v7a",
-                "x86",
-                "x86_64",
-            )
-        }
     }
 
     signingConfigs {
@@ -52,7 +44,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -62,13 +55,17 @@ android {
             }
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = false
+        }
     }
     sourceSets {
         getByName("main").jniLibs.directories.add(layout.buildDirectory.dir("rustJniLibs").get().asFile.absolutePath)
@@ -92,6 +89,7 @@ val ndkBinDir = providers.environmentVariable("ANDROID_NDK_HOME")
 
 val rustLibName = "libwherebus.so"
 val rustOutputDir = layout.buildDirectory.dir("rustJniLibs")
+val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
 
 val cargoBuildTasks = rustTargetByAbi.map { (abi, target) ->
     val taskName = "cargoBuild" + abi
@@ -113,7 +111,9 @@ val cargoBuildTasks = rustTargetByAbi.map { (abi, target) ->
         inputs.dir(rootProject.file("../core/src"))
         inputs.file(rootProject.file("../core/Cargo.toml"))
         inputs.file(rootProject.file("../Cargo.lock"))
-        outputs.file(rootProject.file("../target/$target/debug/$rustLibName"))
+
+        val profile = if (isReleaseBuild) "release" else "debug"
+        outputs.file(rootProject.file("../target/$target/$profile/$rustLibName"))
 
         workingDir = rootProject.file("..")
         val targetEnv = target.uppercase().replace('-', '_')
@@ -122,7 +122,15 @@ val cargoBuildTasks = rustTargetByAbi.map { (abi, target) ->
         environment("CC_$targetUnderscore", linker.get())
         environment("TARGET_CC", linker.get())
         environment("CC", linker.get())
-        commandLine("cargo", "build", "-p", "wherebus", "--target", target)
+        commandLine(buildList {
+            add("cargo")
+            add("build")
+            add("-p")
+            add("wherebus")
+            add("--target")
+            add(target)
+            if (isReleaseBuild) add("--release")
+        })
     }
 }
 
@@ -133,8 +141,11 @@ val buildRustAndroid by tasks.registering {
     dependsOn(cargoBuildTasks)
 
     doLast {
+        val profile = if (isReleaseBuild) "release" else "debug"
+        val outDir = rustOutputDir.get().asFile
+        outDir.deleteRecursively()
         rustTargetByAbi.forEach { (abi, target) ->
-            val from = rootProject.file("../target/$target/debug/$rustLibName")
+            val from = rootProject.file("../target/$target/$profile/$rustLibName")
             val into = rustOutputDir.get().file("$abi/$rustLibName").asFile
             into.parentFile.mkdirs()
             from.copyTo(into, overwrite = true)
@@ -157,11 +168,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.compose)

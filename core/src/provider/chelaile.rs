@@ -6,8 +6,8 @@ use crate::models::*;
 use crate::providers::{BusDataProvider, ProviderError};
 use async_trait::async_trait;
 use client::ChelaileClient;
-use raw::NearbyResponse;
 use parking_lot::Mutex;
+use raw::NearbyResponse;
 
 pub struct ChelaileProvider {
     client: ChelaileClient,
@@ -29,7 +29,11 @@ fn infer_run_state_from_text(text: &str) -> RunState {
     let text = text.trim();
     if text.is_empty() {
         RunState::NoRealtime
-    } else if text.contains("末班") || text.contains("等待发车") || text.contains("未发车") || text.contains("非运营") {
+    } else if text.contains("末班")
+        || text.contains("等待发车")
+        || text.contains("未发车")
+        || text.contains("非运营")
+    {
         RunState::NotOperating
     } else if text.contains("停运") || text.contains("收班") {
         RunState::Stopped
@@ -64,9 +68,8 @@ fn parse_chelaile_arrival(desc: &str, state: i32, distance_to_sp: u32) -> Arriva
     };
 
     if stations_away.is_some() || minutes_away.is_some() {
-        let minutes = minutes_away.or_else(|| {
-            distance_m.filter(|&d| d > 0).map(|d| (d / 400).max(1))
-        });
+        let minutes =
+            minutes_away.or_else(|| distance_m.filter(|&d| d > 0).map(|d| (d / 400).max(1)));
         ArrivalEstimate::Approaching {
             stations_away: stations_away.unwrap_or(0),
             minutes_away: minutes,
@@ -190,7 +193,11 @@ impl BusDataProvider for ChelaileProvider {
             .into_iter()
             .map(|lw| {
                 let target_order = lw.target_station.as_ref().map(|t| t.order).unwrap_or(0);
-                let distance_to_sp = lw.target_station.as_ref().map(|t| t.distance_to_sp).unwrap_or(0);
+                let distance_to_sp = lw
+                    .target_station
+                    .as_ref()
+                    .map(|t| t.distance_to_sp)
+                    .unwrap_or(0);
 
                 let desc = lw.line.desc.clone();
                 let state = lw.line.state;
@@ -198,7 +205,11 @@ impl BusDataProvider for ChelaileProvider {
                 let arrival = parse_chelaile_arrival(&desc, state, distance_to_sp);
                 tracing::debug!(
                     "[chelaile] {} desc=\"{}\" state={} dist={} → {:?}",
-                    lw.line.name, desc, state, distance_to_sp, arrival
+                    lw.line.name,
+                    desc,
+                    state,
+                    distance_to_sp,
+                    arrival
                 );
 
                 LineSummary {
@@ -219,10 +230,7 @@ impl BusDataProvider for ChelaileProvider {
             .collect())
     }
 
-    async fn line_detail(
-        &self,
-        key: &str,
-    ) -> Result<LineDetail, ProviderError> {
+    async fn line_detail(&self, key: &str) -> Result<LineDetail, ProviderError> {
         let resp = self.client.line_route(key).await?;
 
         let start_stop = resp
@@ -288,11 +296,7 @@ impl BusDataProvider for ChelaileProvider {
         })
     }
 
-    async fn realtime(
-        &self,
-        key: &str,
-        target_order: u32,
-    ) -> Result<RealTimeData, ProviderError> {
+    async fn realtime(&self, key: &str, target_order: u32) -> Result<RealTimeData, ProviderError> {
         let route = self.client.line_route(key).await?;
         let line_name = route
             .line
@@ -328,7 +332,9 @@ impl BusDataProvider for ChelaileProvider {
         let run_state = infer_realtime_run_state(&resp);
         tracing::debug!(
             "[chelaile] realtime {} order={} buses={}",
-            line_name, target_order, resp.buses.len()
+            line_name,
+            target_order,
+            resp.buses.len()
         );
 
         let buses: Vec<BusPosition> = resp

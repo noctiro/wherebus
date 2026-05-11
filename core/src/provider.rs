@@ -43,10 +43,6 @@ pub(crate) trait BusDataProvider: Send + Sync {
         lng: f64,
     ) -> Result<Vec<LineSummary>, ProviderError>;
     async fn line_detail(&self, key: &str) -> Result<LineDetail, ProviderError>;
-    async fn realtime(
-        &self,
-        key: &str,
-        target_order: u32,
-    ) -> Result<RealTimeData, ProviderError>;
+    async fn realtime(&self, key: &str, target_order: u32) -> Result<RealTimeData, ProviderError>;
     async fn all_lines(&self) -> Result<Vec<BusRoute>, ProviderError>;
 }

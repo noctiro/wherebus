@@ -1,10 +1,7 @@
-use async_trait::async_trait;
-
 use crate::domain::AppConfig;
 
 use crate::domain::{CacheCategory, CacheStats, ManageError, ServiceInfo};
 
-#[async_trait]
 pub trait ManageService: Send + Sync {
     async fn load_config(&self) -> Result<AppConfig, ManageError>;
     async fn save_config(&self, config: AppConfig) -> Result<(), ManageError>;

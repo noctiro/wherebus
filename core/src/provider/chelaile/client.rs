@@ -25,9 +25,8 @@ impl ChelaileClient {
             HeaderValue::from_static("https://web.chelaile.net.cn/"),
         );
 
-        let root_store = rustls::RootCertStore::from_iter(
-            webpki_roots::TLS_SERVER_ROOTS.iter().cloned(),
-        );
+        let root_store =
+            rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
         let tls = rustls::ClientConfig::builder()
             .with_root_certificates(root_store)
             .with_no_client_auth();

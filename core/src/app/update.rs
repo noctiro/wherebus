@@ -112,14 +112,23 @@ impl App for WherebusApp {
                 let Some(current) = model.current_line.clone() else {
                     return Command::done();
                 };
-                begin_detail_load(model, current.name, current.direction_id, current.target_order)
+                begin_detail_load(
+                    model,
+                    current.name,
+                    current.direction_id,
+                    current.target_order,
+                )
             }
             Event::DetailLoaded(result) => {
                 model.detail_loading = false;
                 match result {
                     Ok(data) => {
                         if let Some(rt) = data.realtime.as_ref() {
-                            sync_nearby_run_state(model, &model.detail_line_name.clone(), Some(rt.run_state));
+                            sync_nearby_run_state(
+                                model,
+                                &model.detail_line_name.clone(),
+                                Some(rt.run_state),
+                            );
                         }
                         populate_detail(model, data);
                     }
@@ -294,46 +303,80 @@ impl App for WherebusApp {
                 .as_ref()
                 .map(|line| line.direction_id.clone())
                 .unwrap_or_default(),
-            detail_direction_label: model.detail_snapshot.as_ref().map(|s| {
-                format!(
-                    "{} → {}",
-                    s.detail.topology.stations.first().map(|st| st.name.as_str()).unwrap_or(""),
-                    s.detail.topology.stations.last().map(|st| st.name.as_str()).unwrap_or("")
-                )
-            }).unwrap_or_default(),
+            detail_direction_label: model
+                .detail_snapshot
+                .as_ref()
+                .map(|s| {
+                    format!(
+                        "{} → {}",
+                        s.detail
+                            .topology
+                            .stations
+                            .first()
+                            .map(|st| st.name.as_str())
+                            .unwrap_or(""),
+                        s.detail
+                            .topology
+                            .stations
+                            .last()
+                            .map(|st| st.name.as_str())
+                            .unwrap_or("")
+                    )
+                })
+                .unwrap_or_default(),
             detail_can_switch: model
                 .current_line
                 .as_ref()
                 .and_then(|l| l.reverse_id.as_ref())
                 .is_some(),
-            detail_comments: model.detail_snapshot.as_ref()
+            detail_comments: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.detail.meta.notes.clone())
                 .unwrap_or_default(),
             detail_loading: model.detail_loading,
             detail_error: model.detail_error.clone(),
             detail_stations: model.detail_stations.clone(),
-            detail_first_time: model.detail_snapshot.as_ref()
+            detail_first_time: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.detail.meta.first_service.map(|t| t.to_string()))
                 .unwrap_or_default(),
-            detail_last_time: model.detail_snapshot.as_ref()
+            detail_last_time: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.detail.meta.last_service.map(|t| t.to_string()))
                 .unwrap_or_default(),
-            detail_price: model.detail_snapshot.as_ref().map(|s| match &s.detail.meta.fare {
-                Fare::Text(v) => v.clone(),
-                Fare::Unknown => String::new(),
-            }).unwrap_or_default(),
-            detail_company: model.detail_snapshot.as_ref()
+            detail_price: model
+                .detail_snapshot
+                .as_ref()
+                .map(|s| match &s.detail.meta.fare {
+                    Fare::Text(v) => v.clone(),
+                    Fare::Unknown => String::new(),
+                })
+                .unwrap_or_default(),
+            detail_company: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.detail.meta.company.clone())
                 .unwrap_or_default(),
-            detail_phone: model.detail_snapshot.as_ref().map(|s| match &s.detail.meta.contact {
-                ContactInfo::Phone(v) => v.clone(),
-                ContactInfo::Unknown => String::new(),
-            }).unwrap_or_default(),
-            detail_plan_time: model.detail_snapshot.as_ref()
+            detail_phone: model
+                .detail_snapshot
+                .as_ref()
+                .map(|s| match &s.detail.meta.contact {
+                    ContactInfo::Phone(v) => v.clone(),
+                    ContactInfo::Unknown => String::new(),
+                })
+                .unwrap_or_default(),
+            detail_plan_time: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.realtime.as_ref())
                 .and_then(|rt| rt.plan_time.clone())
                 .unwrap_or_default(),
-            detail_run_state: model.detail_snapshot.as_ref()
+            detail_run_state: model
+                .detail_snapshot
+                .as_ref()
                 .and_then(|s| s.realtime.as_ref())
                 .map(|rt| rt.run_state),
             settings_current_city: model.city_label.clone(),
@@ -524,10 +567,7 @@ fn refresh_search_results(model: &mut Model) {
         .cloned()
         .collect();
 
-    model.search_lookup = filtered
-        .iter()
-        .map(selected_line_from_route)
-        .collect();
+    model.search_lookup = filtered.iter().map(selected_line_from_route).collect();
 
     apply_search_cards(
         model,

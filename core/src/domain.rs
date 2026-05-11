@@ -1,5 +1,5 @@
-pub mod config;
 pub mod boundary;
+pub mod config;
 pub mod region;
 pub mod transit;
 

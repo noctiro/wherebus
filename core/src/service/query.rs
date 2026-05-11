@@ -1,8 +1,5 @@
-use async_trait::async_trait;
-
 use crate::domain::{LineDetailSnapshot, NearbySnapshot, NetworkState, QueryError, ServiceInfo};
 
-#[async_trait]
 pub trait QueryService: Send + Sync {
     async fn available_services(&self) -> Vec<ServiceInfo>;
     async fn current_service(&self) -> ServiceInfo;

@@ -41,7 +41,8 @@ fn infer_run_state_from_text(text: &str) -> RunState {
     let text = text.trim();
     if text.is_empty() {
         RunState::NoRealtime
-    } else if text.contains("非运营") || text.contains("未发车") || text.contains("等待发车") {
+    } else if text.contains("非运营") || text.contains("未发车") || text.contains("等待发车")
+    {
         RunState::NotOperating
     } else if text.contains("停运") || text.contains("收班") {
         RunState::Stopped
@@ -294,10 +295,7 @@ impl BusDataProvider for MygolbsProvider {
             .collect())
     }
 
-    async fn line_detail(
-        &self,
-        key: &str,
-    ) -> Result<LineDetail, ProviderError> {
+    async fn line_detail(&self, key: &str) -> Result<LineDetail, ProviderError> {
         let (name, direction_raw) = Self::parse_direction_id(key);
         let resp = self.client.line_stations(&name, &direction_raw).await?;
         let first_time = resp
@@ -381,17 +379,18 @@ impl BusDataProvider for MygolbsProvider {
         })
     }
 
-    async fn realtime(
-        &self,
-        key: &str,
-        order: u32,
-    ) -> Result<RealTimeData, ProviderError> {
+    async fn realtime(&self, key: &str, order: u32) -> Result<RealTimeData, ProviderError> {
         let (name, direction_raw) = Self::parse_direction_id(key);
         let resp = self.client.realtime(&name, &direction_raw, order).await?;
         let run_state = infer_realtime_run_state(&resp);
         tracing::debug!(
             "[mygolbs] realtime {} order={} runState={} hasReal={} buses={} rtime={}",
-            name, order, resp.run_state, resp.has_real, resp.list.len(), resp.rtime_list.len()
+            name,
+            order,
+            resp.run_state,
+            resp.has_real,
+            resp.list.len(),
+            resp.rtime_list.len()
         );
 
         // speed 单位为 m/min，转换为 km/h: speed * 60 / 1000

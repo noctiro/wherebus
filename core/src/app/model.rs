@@ -1,5 +1,5 @@
-use crate::models::{AppConfig, BusRoute, LineSummary};
 use crate::domain::{LineDetailSnapshot, NetworkState};
+use crate::models::{AppConfig, BusRoute, LineSummary};
 
 use super::view::{CacheStatsView, CityItemView, LineCardView, NearbyItemView, StationItemView};
 

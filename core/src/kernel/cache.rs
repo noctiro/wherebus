@@ -116,4 +116,3 @@ impl<T: Clone + Send + 'static> TypedCache<T> {
         }
     }
 }
-

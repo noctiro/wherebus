@@ -12,12 +12,10 @@ use crate::app::dto::{BootstrapData, NearbyData, ServiceSwitchData};
 use crate::app::effect::{
     ClearCacheCategoryOp, FetchDetailOp, FetchNearbyOp, SaveConfigOp, SwitchServiceOp,
 };
-use crate::app::view::{
-    CacheStatsView, CityItemView, NearbyItemView,
-};
+use crate::app::view::{CacheStatsView, CityItemView, NearbyItemView};
 use crate::domain::{
-    ALL_CITIES, AppConfig, ArrivalEstimate, BusRoute, LineSummary, NetworkState,
-    RunState, ServiceInfo,
+    ALL_CITIES, AppConfig, ArrivalEstimate, BusRoute, LineSummary, NetworkState, RunState,
+    ServiceInfo,
 };
 use crate::kernel::storage::platform::set_android_data_dir;
 use crate::service::{CacheCategory, ManageService, QueryService, Services};
@@ -196,8 +194,7 @@ impl NativeEngine {
         target_order: u32,
     ) -> Result<crate::domain::LineDetailSnapshot, String> {
         self.runtime.block_on(async {
-            self
-                .services
+            self.services
                 .line_detail(direction_id, target_order)
                 .await
                 .map_err(|err| err.to_string())
@@ -272,9 +269,7 @@ impl SharedCoreBridge {
             .lock()
             .map_err(|_| "crux bridge mutex poisoned".to_string())?;
         let mut view = Vec::new();
-        bridge
-            .view(&mut view)
-            .map_err(|err| err.to_string())?;
+        bridge.view(&mut view).map_err(|err| err.to_string())?;
         String::from_utf8(view).map_err(|err| err.to_string())
     }
 
@@ -291,7 +286,11 @@ impl SharedCoreBridge {
                 InternalEffectResult::Resolve(response_json) => {
                     let mut produced = Vec::new();
                     bridge
-                        .resolve(EffectId(request.id), response_json.as_bytes(), &mut produced)
+                        .resolve(
+                            EffectId(request.id),
+                            response_json.as_bytes(),
+                            &mut produced,
+                        )
                         .map_err(|err| err.to_string())?;
                     queue.extend(parse_requests(produced)?);
                 }
@@ -312,54 +311,64 @@ impl SharedCoreBridge {
         };
         let engine = NativeEngine::shared()?;
 
-        let response = match kind.as_str() {
-            "RequestLocationPermission" | "FetchAutoLocation" => return Ok(InternalEffectResult::Platform),
-            "Bootstrap" => serde_json::to_string(&engine.bootstrap_data()?).map(InternalEffectResult::Resolve),
-            "SaveConfig" => {
-                let op: SaveConfigOp =
-                    serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
-                engine.save_config(op.config)?;
-                Ok(InternalEffectResult::NotifyOnly)
+        let response =
+            match kind.as_str() {
+                "RequestLocationPermission" | "FetchAutoLocation" => {
+                    return Ok(InternalEffectResult::Platform);
+                }
+                "Bootstrap" => serde_json::to_string(&engine.bootstrap_data()?)
+                    .map(InternalEffectResult::Resolve),
+                "SaveConfig" => {
+                    let op: SaveConfigOp =
+                        serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
+                    engine.save_config(op.config)?;
+                    Ok(InternalEffectResult::NotifyOnly)
+                }
+                "FetchNearby" => {
+                    let op: FetchNearbyOp =
+                        serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
+                    tracing::debug!(
+                        "[bridge] FetchNearby lat={:.4} lng={:.4} force={}",
+                        op.lat,
+                        op.lng,
+                        op.force
+                    );
+                    let result = if op.force {
+                        engine.refresh_nearby(op.lat, op.lng)
+                    } else {
+                        engine.fetch_nearby(op.lat, op.lng)
+                    };
+                    serde_json::to_string(&result).map(InternalEffectResult::Resolve)
+                }
+                "LoadAllRoutes" => serde_json::to_string(&engine.load_all_routes())
+                    .map(InternalEffectResult::Resolve),
+                "FetchDetail" => {
+                    let op: FetchDetailOp =
+                        serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
+                    serde_json::to_string(&engine.fetch_detail(&op.direction_id, op.target_order))
+                        .map(InternalEffectResult::Resolve)
+                }
+                "SwitchService" => {
+                    let op: SwitchServiceOp =
+                        serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
+                    serde_json::to_string(&engine.switch_service(op.service_id))
+                        .map(InternalEffectResult::Resolve)
+                }
+                "LoadCacheStats" => {
+                    serde_json::to_string(&engine.cache_stats()?).map(InternalEffectResult::Resolve)
+                }
+                "ClearCache" => {
+                    serde_json::to_string(&engine.clear_cache()?).map(InternalEffectResult::Resolve)
+                }
+                "ClearCacheCategory" => {
+                    let op: ClearCacheCategoryOp =
+                        serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
+                    serde_json::to_string(&engine.clear_cache_category(op.index)?)
+                        .map(InternalEffectResult::Resolve)
+                }
+                other => return Err(format!("unsupported internal effect: {other}")),
             }
-            "FetchNearby" => {
-                let op: FetchNearbyOp =
-                    serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
-                tracing::debug!("[bridge] FetchNearby lat={:.4} lng={:.4} force={}", op.lat, op.lng, op.force);
-                let result = if op.force {
-                    engine.refresh_nearby(op.lat, op.lng)
-                } else {
-                    engine.fetch_nearby(op.lat, op.lng)
-                };
-                serde_json::to_string(&result)
-                    .map(InternalEffectResult::Resolve)
-            }
-            "LoadAllRoutes" => serde_json::to_string(&engine.load_all_routes())
-                .map(InternalEffectResult::Resolve),
-            "FetchDetail" => {
-                let op: FetchDetailOp =
-                    serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
-                serde_json::to_string(&engine.fetch_detail(&op.direction_id, op.target_order))
-                    .map(InternalEffectResult::Resolve)
-            }
-            "SwitchService" => {
-                let op: SwitchServiceOp =
-                    serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
-                serde_json::to_string(&engine.switch_service(op.service_id))
-                    .map(InternalEffectResult::Resolve)
-            }
-            "LoadCacheStats" => serde_json::to_string(&engine.cache_stats()?)
-                .map(InternalEffectResult::Resolve),
-            "ClearCache" => serde_json::to_string(&engine.clear_cache()?)
-                .map(InternalEffectResult::Resolve),
-            "ClearCacheCategory" => {
-                let op: ClearCacheCategoryOp =
-                    serde_json::from_value(payload.clone()).map_err(|err| err.to_string())?;
-                serde_json::to_string(&engine.clear_cache_category(op.index)?)
-                    .map(InternalEffectResult::Resolve)
-            }
-            other => return Err(format!("unsupported internal effect: {other}")),
-        }
-        .map_err(|err| err.to_string())?;
+            .map_err(|err| err.to_string())?;
 
         Ok(response)
     }
@@ -400,9 +409,8 @@ fn bridge_update_json(event_json: &str) -> String {
         Ok(data) => BridgeEnvelope::success(data),
         Err(error) => BridgeEnvelope::failure(error),
     };
-    serde_json::to_string(&envelope).unwrap_or_else(|_| {
-        "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string()
-    })
+    serde_json::to_string(&envelope)
+        .unwrap_or_else(|_| "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string())
 }
 
 fn bridge_resolve_json(effect_id: u32, response_json: &str) -> String {
@@ -410,9 +418,8 @@ fn bridge_resolve_json(effect_id: u32, response_json: &str) -> String {
         Ok(data) => BridgeEnvelope::success(data),
         Err(error) => BridgeEnvelope::failure(error),
     };
-    serde_json::to_string(&envelope).unwrap_or_else(|_| {
-        "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string()
-    })
+    serde_json::to_string(&envelope)
+        .unwrap_or_else(|_| "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string())
 }
 
 fn bridge_view_json() -> String {
@@ -420,9 +427,8 @@ fn bridge_view_json() -> String {
         Ok(data) => BridgeEnvelope::success(data),
         Err(error) => BridgeEnvelope::failure(error),
     };
-    serde_json::to_string(&envelope).unwrap_or_else(|_| {
-        "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string()
-    })
+    serde_json::to_string(&envelope)
+        .unwrap_or_else(|_| "{\"ok\":false,\"error\":\"bridge serialization failure\"}".to_string())
 }
 
 fn build_city_picker_items(services: Vec<ServiceInfo>) -> Vec<CityItemView> {
@@ -529,7 +535,6 @@ fn nearby_to_dto(snapshot: crate::domain::NearbySnapshot) -> NearbyData {
     }
 }
 
-
 use jni::EnvUnowned;
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JString};
@@ -544,23 +549,26 @@ pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_setDa
     use std::sync::Once;
     static INIT_TRACING: Once = Once::new();
     INIT_TRACING.call_once(|| {
+        use tracing_subscriber::filter;
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
         if let Ok(layer) = tracing_android::layer("wherebus") {
             tracing_subscriber::registry()
-                .with(tracing_subscriber::EnvFilter::new("wherebus=debug"))
+                .with(filter::Targets::new().with_target("wherebus", tracing::Level::DEBUG))
                 .with(layer)
                 .init();
         }
     });
 
-    unowned_env.with_env(|env| -> jni::errors::Result<()> {
-        let path = path.try_to_string(env)?;
-        if !path.is_empty() {
-            set_android_data_dir(path);
-        }
-        Ok(())
-    }).resolve::<ThrowRuntimeExAndDefault>();
+    unowned_env
+        .with_env(|env| -> jni::errors::Result<()> {
+            let path = path.try_to_string(env)?;
+            if !path.is_empty() {
+                set_android_data_dir(path);
+            }
+            Ok(())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>();
 }
 
 #[unsafe(no_mangle)]
@@ -569,11 +577,13 @@ pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_updat
     _class: JClass<'local>,
     event_json: JString<'local>,
 ) -> JString<'local> {
-    unowned_env.with_env(|env| {
-        let event_json = event_json.try_to_string(env)?;
-        let response = bridge_update_json(&event_json);
-        JString::from_str(env, &response)
-    }).resolve::<ThrowRuntimeExAndDefault>()
+    unowned_env
+        .with_env(|env| {
+            let event_json = event_json.try_to_string(env)?;
+            let response = bridge_update_json(&event_json);
+            JString::from_str(env, &response)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[unsafe(no_mangle)]
@@ -583,11 +593,13 @@ pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_resol
     effect_id: jint,
     response_json: JString<'local>,
 ) -> JString<'local> {
-    unowned_env.with_env(|env| {
-        let response_json = response_json.try_to_string(env)?;
-        let response = bridge_resolve_json(effect_id as u32, &response_json);
-        JString::from_str(env, &response)
-    }).resolve::<ThrowRuntimeExAndDefault>()
+    unowned_env
+        .with_env(|env| {
+            let response_json = response_json.try_to_string(env)?;
+            let response = bridge_resolve_json(effect_id as u32, &response_json);
+            JString::from_str(env, &response)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[unsafe(no_mangle)]
@@ -595,8 +607,10 @@ pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_view<
     mut unowned_env: EnvUnowned<'local>,
     _class: JClass<'local>,
 ) -> JString<'local> {
-    unowned_env.with_env(|env| {
-        let response = bridge_view_json();
-        JString::from_str(env, &response)
-    }).resolve::<ThrowRuntimeExAndDefault>()
+    unowned_env
+        .with_env(|env| {
+            let response = bridge_view_json();
+            JString::from_str(env, &response)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
 }

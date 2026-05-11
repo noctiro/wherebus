@@ -93,8 +93,7 @@ impl Default for ContactInfo {
     }
 }
 
-impl ContactInfo {
-}
+impl ContactInfo {}
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct LineMeta {

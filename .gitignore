@@ -8,8 +8,13 @@
 /android/.externalNativeBuild
 /android/.cxx
 
+# Signing
+*.jks
+*.keystore
+keystore.properties
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
 
 .vscode/
+.codacy/

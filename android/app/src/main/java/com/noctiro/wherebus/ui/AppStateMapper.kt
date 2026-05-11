@@ -74,7 +74,7 @@ internal fun NativeAppView.toUiState(feedbackMessage: String?): WhereBusUiState 
     }
 
     return WhereBusUiState(
-        loading = false,
+        initialSync = false,
         showWelcome = show_welcome,
         currentPage = when (current_page) {
             1 -> RootPage.Settings

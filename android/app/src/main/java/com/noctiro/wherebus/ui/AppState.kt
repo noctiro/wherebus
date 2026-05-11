@@ -17,7 +17,7 @@ enum class RootPage {
 }
 
 data class WhereBusUiState(
-    val loading: Boolean = true,
+    val initialSync: Boolean = true,
     val showWelcome: Boolean = false,
     val currentPage: RootPage = RootPage.Nearby,
     val showSearch: Boolean = false,

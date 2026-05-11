@@ -51,7 +51,15 @@ class WhereBusViewModel(
                 syncFromCore(cruxRuntime.start())
                 startNearbyRefresh()
             }
-            WhereBusAction.MarkOnboardingDone -> emit(CruxUserEvent.WelcomeStart)
+            WhereBusAction.MarkOnboardingDone -> viewModelScope.launch {
+                val state = _uiState.value
+                if (state.config.locationMode == com.noctiro.wherebus.domain.LocationMode.Manual) {
+                    syncFromCore(cruxRuntime.dispatch(
+                        CruxUserEvent.SettingsSaveLocation(lat = state.manualLatText, lng = state.manualLngText),
+                    ))
+                }
+                syncFromCore(cruxRuntime.dispatch(CruxUserEvent.WelcomeStart))
+            }
             WhereBusAction.RequestLocationPermission -> emit(CruxUserEvent.WelcomeRequestLocation)
             WhereBusAction.OpenSearch -> {
                 _uiState.update { it.copy(showSearch = true) }
@@ -201,6 +209,8 @@ class WhereBusViewModel(
             showSearch = previous.showSearch,
             searchQuery = previous.searchQuery,
             cityPickerQuery = previous.cityPickerQuery,
+            manualLatText = if (previous.initialSync) view.settings_lat else previous.manualLatText,
+            manualLngText = if (previous.initialSync) view.settings_lng else previous.manualLngText,
             lastShownSettingsStatus = if (view.settings_status.isNotBlank()) view.settings_status else previous.lastShownSettingsStatus,
         )
         _uiState.value = newState

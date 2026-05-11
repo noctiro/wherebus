@@ -32,7 +32,6 @@ import com.noctiro.wherebus.data.PlatformPermissionRequester
 import com.noctiro.wherebus.ui.pages.CacheManagerScreen
 import com.noctiro.wherebus.ui.pages.CityPickerScreen
 import com.noctiro.wherebus.ui.pages.DetailScreen
-import com.noctiro.wherebus.ui.pages.LoadingScreen
 import com.noctiro.wherebus.ui.pages.MainShell
 import com.noctiro.wherebus.ui.pages.SearchScreen
 import com.noctiro.wherebus.ui.pages.WelcomeScreen
@@ -99,7 +98,6 @@ fun WhereBusApp(
                     ),
             ) {
                 when {
-                    uiState.loading -> LoadingScreen()
                     uiState.showWelcome -> WelcomeScreen(
                         state = uiState,
                         onAction = viewModel::dispatch,

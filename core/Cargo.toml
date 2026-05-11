@@ -34,3 +34,4 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["r
 tracing-android = "0.2"
 zstd = "0.13"
 jni = { version = "0.22", default-features = false }
+pinyin = "0.11.0"

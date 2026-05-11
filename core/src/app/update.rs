@@ -2,6 +2,7 @@ use crate::models::{
     AppConfig, ArrivalEstimate, BusPosition, BusRoute, CongestionLevel, ContactInfo, CrowdLevel,
     Fare, LineSummary, LocationMode, RouteSegment, RunState, StopStatus,
 };
+use crate::support::pinyin_match::matches_pinyin;
 use crux_core::{App, Command};
 
 use super::dto::BootstrapData;
@@ -221,10 +222,13 @@ impl App for WherebusApp {
                     for item in &model.city_picker_all {
                         if item.is_header {
                             pending_header = Some(item);
-                            header_matches = item.name.to_lowercase().contains(&needle);
+                            header_matches = item.name.to_lowercase().contains(&needle)
+                                || matches_pinyin(&item.name, &needle);
                         } else if header_matches
                             || item.name.to_lowercase().contains(&needle)
                             || item.provider.to_lowercase().contains(&needle)
+                            || matches_pinyin(&item.name, &needle)
+                            || matches_pinyin(&item.provider, &needle)
                         {
                             if let Some(h) = pending_header.take() {
                                 result.push(h.clone());
@@ -562,7 +566,9 @@ fn refresh_search_results(model: &mut Model) {
     let filtered: Vec<BusRoute> = model
         .all_routes
         .iter()
-        .filter(|route| route.name.to_lowercase().contains(&query))
+        .filter(|route| {
+            route.name.to_lowercase().contains(&query) || matches_pinyin(&route.name, &query)
+        })
         .take(50)
         .cloned()
         .collect();

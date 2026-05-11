@@ -6,6 +6,52 @@ use crate::provider::{BusDataProvider, ProviderError};
 
 pub const SERVICE_ID: &str = "debug_beijing";
 
+/// 调节 debug provider 模拟行为的连续参数，所有值范围 0.0~1.0
+#[derive(Debug, Clone, Copy)]
+pub struct DebugParams {
+    /// 车流密度：0.0 = 几乎没车，1.0 = 满线路运行
+    pub density: f32,
+    /// 道路拥堵程度：0.0 = 全线畅通，1.0 = 全线严重拥堵
+    pub congestion: f32,
+    /// 车厢拥挤程度：0.0 = 全部空旷，1.0 = 全部满载
+    pub crowding: f32,
+    /// 数据可用性：0.0 = 全部正常，1.0 = 全部离线/无数据
+    pub offline: f32,
+}
+
+impl Default for DebugParams {
+    fn default() -> Self {
+        Self { density: 0.8, congestion: 0.3, crowding: 0.4, offline: 0.0 }
+    }
+}
+
+impl DebugParams {
+    pub fn rush_hour() -> Self {
+        Self { density: 0.9, congestion: 0.85, crowding: 0.9, offline: 0.0 }
+    }
+
+    pub fn late_night() -> Self {
+        Self { density: 0.1, congestion: 0.0, crowding: 0.05, offline: 0.0 }
+    }
+
+    pub fn no_service() -> Self {
+        Self { density: 0.0, congestion: 0.0, crowding: 0.0, offline: 1.0 }
+    }
+
+    fn clamp(v: f32) -> f32 {
+        v.clamp(0.0, 1.0)
+    }
+
+    pub fn normalized(&self) -> Self {
+        Self {
+            density: Self::clamp(self.density),
+            congestion: Self::clamp(self.congestion),
+            crowding: Self::clamp(self.crowding),
+            offline: Self::clamp(self.offline),
+        }
+    }
+}
+
 struct Rng(u64);
 
 impl Rng {
@@ -31,10 +77,6 @@ impl Rng {
 
     fn float(&mut self) -> f64 {
         (self.next() % 10000) as f64 / 10000.0
-    }
-
-    fn pick<T: Copy>(&mut self, items: &[T]) -> T {
-        items[(self.next() as usize) % items.len()]
     }
 }
 
@@ -188,21 +230,21 @@ const BUS_PLATES: &[&str] = &[
     "京A00001", "京A00002", "京A00003", "京A12345", "京B10086",
     "京B10087", "京B20088", "京C20001", "京C20002", "京C30003",
     "京D30001", "京D30002", "京D40004", "京E40001", "京E50005",
+    "京F50006", "京F50007", "京G60008", "京G60009", "京H70010",
+    "京H70011", "京J80012", "京J80013", "京K90014", "京K90015",
+    "京L01001", "京L01002", "京M02003", "京M02004", "京N03005",
+    "京N03006", "京P04007", "京P04008", "京Q05009", "京Q05010",
 ];
 
-const CROWD_LEVELS: &[CrowdLevel] = &[
-    CrowdLevel::Unknown, CrowdLevel::Spacious, CrowdLevel::Spacious,
-    CrowdLevel::Normal, CrowdLevel::Normal, CrowdLevel::Normal,
-    CrowdLevel::Crowded, CrowdLevel::Full,
-];
+pub struct DebugProvider {
+    params: DebugParams,
+}
 
-const CONGESTION_LEVELS: &[CongestionLevel] = &[
-    CongestionLevel::Smooth, CongestionLevel::Smooth, CongestionLevel::Smooth,
-    CongestionLevel::Slow, CongestionLevel::Slow,
-    CongestionLevel::Congested, CongestionLevel::Unknown,
-];
-
-pub struct DebugProvider;
+impl DebugProvider {
+    pub fn new(params: DebugParams) -> Self {
+        Self { params: params.normalized() }
+    }
+}
 
 impl DebugProvider {
     fn find_route(key: &str) -> &'static SimRoute {
@@ -211,7 +253,14 @@ impl DebugProvider {
             .unwrap_or(&ROUTES[0])
     }
 
-    fn sim_run_state(route: &SimRoute, rng: &mut Rng) -> RunState {
+    fn sim_run_state(&self, route: &SimRoute, rng: &mut Rng) -> RunState {
+        if self.params.offline >= 1.0 {
+            return RunState::Stopped;
+        }
+        if rng.float() < self.params.offline as f64 {
+            return RunState::NoRealtime;
+        }
+
         let t = time_secs();
         let hour = ((t / 3600) % 24) as u32;
         let first_h: u32 = route.first_service.split(':').next().unwrap_or("5").parse().unwrap_or(5);
@@ -221,13 +270,45 @@ impl DebugProvider {
             if hour < first_h { return RunState::NotOperating; }
             if hour >= last_h { return RunState::Stopped; }
         }
-        if rng.range(0, 20) == 0 { return RunState::NoRealtime; }
         RunState::Running
     }
 
-    fn sim_buses(route: &SimRoute, rng: &mut Rng) -> Vec<BusPosition> {
+    fn pick_crowd(&self, rng: &mut Rng) -> CrowdLevel {
+        let r = rng.float() as f32;
+        let c = self.params.crowding;
+        if r < c * 0.4 {
+            CrowdLevel::Full
+        } else if r < c * 0.8 {
+            CrowdLevel::Crowded
+        } else if r < 0.5 + c * 0.3 {
+            CrowdLevel::Normal
+        } else {
+            CrowdLevel::Spacious
+        }
+    }
+
+    fn pick_congestion(&self, rng: &mut Rng) -> CongestionLevel {
+        let r = rng.float() as f32;
+        let c = self.params.congestion;
+        if r < c * 0.5 {
+            CongestionLevel::Congested
+        } else if r < c {
+            CongestionLevel::Slow
+        } else {
+            CongestionLevel::Smooth
+        }
+    }
+
+    fn bus_count(&self, rng: &mut Rng) -> usize {
+        let d = self.params.density;
+        let min = (1.0 + d * 5.0) as u64;
+        let max = (2.0 + d * 12.0) as u64;
+        rng.range(min, max) as usize
+    }
+
+    fn sim_buses(&self, route: &SimRoute, rng: &mut Rng) -> Vec<BusPosition> {
         let n_stops = route.stops.len();
-        let bus_count = rng.range(2, 5) as usize;
+        let bus_count = self.bus_count(rng).min(BUS_PLATES.len());
         let t = time_secs();
         let mut buses = Vec::with_capacity(bus_count);
         let mut used_plates = Vec::new();
@@ -257,7 +338,8 @@ impl DebugProvider {
             let jitter_lng = (rng.float() - 0.5) * 0.0003;
 
             let dist = ((stop.lat - lat).powi(2) + (stop.lng - lng).powi(2)).sqrt() * 111_000.0;
-            let speed_mps = 6.0 + rng.float() * 10.0;
+            let base_speed = 4.0 + (1.0 - self.params.congestion as f64) * 12.0;
+            let speed_mps = base_speed + rng.float() * 4.0;
             let travel_secs = if dist < 1.0 { 0 } else { (dist / speed_mps) as u32 };
 
             let dy = stop.lat - prev.lat;
@@ -265,7 +347,7 @@ impl DebugProvider {
             let angle = dx.atan2(dy).to_degrees();
             let angle_jitter = (rng.float() - 0.5) * 10.0;
 
-            let crowd = rng.pick(CROWD_LEVELS);
+            let crowd = self.pick_crowd(rng);
 
             let desc = if is_arriving {
                 format!("{}即将到站", stop.name)
@@ -294,19 +376,20 @@ impl DebugProvider {
         buses
     }
 
-    fn sim_segments(route: &SimRoute, rng: &mut Rng) -> Vec<RouteSegment> {
+    fn sim_segments(&self, route: &SimRoute, rng: &mut Rng) -> Vec<RouteSegment> {
         let n = route.stops.len();
         (0..n.saturating_sub(1)).map(|i| {
             let s1 = &route.stops[i];
             let s2 = &route.stops[i + 1];
             let dist = ((s2.lat - s1.lat).powi(2) + (s2.lng - s1.lng).powi(2)).sqrt() * 111_000.0;
-            let speed = 8.0 + rng.float() * 40.0;
-            let cong = rng.pick(CONGESTION_LEVELS);
+            let base_speed = 10.0 + (1.0 - self.params.congestion as f64) * 38.0;
+            let speed = base_speed + rng.float() * 8.0;
+            let cong = self.pick_congestion(rng);
             RouteSegment { distance: Some(dist), speed: Some(speed), congestion: cong }
         }).collect()
     }
 
-    fn sim_station_arrivals(route: &SimRoute, buses: &[BusPosition], rng: &mut Rng) -> Vec<StationArrival> {
+    fn sim_station_arrivals(&self, route: &SimRoute, buses: &[BusPosition], rng: &mut Rng) -> Vec<StationArrival> {
         let n = route.stops.len();
         (1..=n).filter_map(|idx| {
             let arriving = buses.iter().filter(|b| b.station_index == idx as u32 && b.is_arriving).count() as u32;
@@ -323,11 +406,12 @@ impl DebugProvider {
         }).collect()
     }
 
-    fn sim_arrival_estimates(route: &SimRoute, target_order: u32, rng: &mut Rng) -> Vec<ArrivalDetail> {
+    fn sim_arrival_estimates(&self, route: &SimRoute, target_order: u32, rng: &mut Rng) -> Vec<ArrivalDetail> {
         let n = route.stops.len() as u32;
         if target_order == 0 || target_order > n { return vec![]; }
 
-        let bus_count = rng.range(1, 4);
+        let count = (1.0 + self.params.density * 5.0) as u64;
+        let bus_count = rng.range(1, count.max(2));
         let mut estimates = Vec::new();
         let mut prev_away = 0u32;
 
@@ -335,7 +419,8 @@ impl DebugProvider {
             let away = prev_away + rng.range(1, 4) as u32;
             if away >= target_order { break; }
             let dist_per_stop = rng.range(300, 1200) as u32;
-            let min_per_stop = rng.range(1, 3) as u32;
+            let speed_factor = 1.0 + self.params.congestion * 2.0;
+            let min_per_stop = (speed_factor * rng.range(1, 3) as f32) as u32;
             estimates.push(ArrivalDetail {
                 stations_away: away,
                 minutes_away: away * min_per_stop + rng.range(0, 2) as u32,
@@ -416,7 +501,7 @@ impl BusDataProvider for DebugProvider {
                 .find(|(_, s)| s.name == station || s.id == station);
             let Some((idx, _)) = found else { continue; };
 
-            let run_state = Self::sim_run_state(route, &mut rng);
+            let run_state = self.sim_run_state(route, &mut rng);
             let arrival = match run_state {
                 RunState::NotOperating | RunState::Stopped => ArrivalEstimate::NoService,
                 RunState::NoRealtime => ArrivalEstimate::Unknown,
@@ -503,22 +588,22 @@ impl BusDataProvider for DebugProvider {
         let route = Self::find_route(key);
         let mut rng = Rng::from_time();
 
-        let run_state = Self::sim_run_state(route, &mut rng);
+        let run_state = self.sim_run_state(route, &mut rng);
         if run_state == RunState::NotOperating || run_state == RunState::Stopped {
             return Ok(RealTimeData {
                 run_state,
                 plan_time: Some(route.first_service.into()),
                 buses: vec![],
                 station_arrivals: vec![],
-                segments: Self::sim_segments(route, &mut rng),
+                segments: self.sim_segments(route, &mut rng),
                 arrival_estimates: vec![],
             });
         }
 
-        let buses = Self::sim_buses(route, &mut rng);
-        let station_arrivals = Self::sim_station_arrivals(route, &buses, &mut rng);
-        let segments = Self::sim_segments(route, &mut rng);
-        let arrival_estimates = Self::sim_arrival_estimates(route, target_order, &mut rng);
+        let buses = self.sim_buses(route, &mut rng);
+        let station_arrivals = self.sim_station_arrivals(route, &buses, &mut rng);
+        let segments = self.sim_segments(route, &mut rng);
+        let arrival_estimates = self.sim_arrival_estimates(route, target_order, &mut rng);
 
         Ok(RealTimeData {
             run_state,

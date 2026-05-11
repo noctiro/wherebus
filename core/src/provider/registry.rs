@@ -50,7 +50,7 @@ pub fn create_provider(service_id: &str) -> Arc<dyn BusDataProvider> {
 
     #[cfg(debug_assertions)]
     if service_id == debug::SERVICE_ID {
-        return Arc::new(debug::DebugProvider);
+        return Arc::new(debug::DebugProvider::new(debug::DebugParams::default()));
     }
 
     if let Some(city) = chelaile::cities::CITIES

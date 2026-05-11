@@ -34,9 +34,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.noctiro.wherebus.domain.CongestionLevel
 import com.noctiro.wherebus.domain.LineDetailUi
 import com.noctiro.wherebus.domain.runStateLabel
 import com.noctiro.wherebus.ui.WhereBusAction
@@ -141,6 +143,8 @@ fun DetailScreen(
                 }
             }
         } else {
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -153,36 +157,68 @@ fun DetailScreen(
             ) {
                 snapshot?.let { snap ->
                     val stationList = snap.detail.stations
-                    items(
-                        count = stationList.size,
-                        key = { i -> "station_$i" },
-                    ) { index ->
-                        StationTimelineRow(
-                            station = stationList[index],
-                            displayOrder = stationList[index].order
-                                .takeIf { it > 0 } ?: (index + 1),
-                            isFirst = index == 0,
-                            isLast = index == stationList.lastIndex,
-                            isNearest = index == nearestIndex,
-                            isSelected = index == selectedIndex && index != nearestIndex,
-                            isPassed = index < nearestIndex,
-                            nearestBusEta = busCards.firstOrNull()?.let { card ->
-                                if (index == nearestIndex) card.etaMinutes else null
-                            },
-                            selectedBusEta = if (index == selectedIndex && index != nearestIndex) {
-                                busCards.firstOrNull()?.let { card ->
-                                    val transit = (card.currentStationIndex until index).sumOf { i ->
-                                        stationList[i].segmentTimeSeconds
+
+                    stationList.forEachIndexed { index, station ->
+                        val isPassed = index < nearestIndex
+
+                        val arrivingBuses = station.buses.filter { it.isArriving }
+                        if (arrivingBuses.isNotEmpty() && index > 0) {
+                            item(key = "bus_arriving_$index") {
+                                BusOnTrackRow(
+                                    buses = arrivingBuses,
+                                    isArriving = true,
+                                    trackColor = congestionColor(
+                                        station.prevCongestion,
+                                        if (isPassed || index == nearestIndex) primaryColor else outlineVariantColor,
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
+                        }
+
+                        item(key = "station_$index") {
+                            StationTimelineRow(
+                                station = station,
+                                displayOrder = station.order
+                                    .takeIf { it > 0 } ?: (index + 1),
+                                isFirst = index == 0,
+                                isLast = index == stationList.lastIndex,
+                                isNearest = index == nearestIndex,
+                                isSelected = index == selectedIndex && index != nearestIndex,
+                                isPassed = isPassed,
+                                nearestBusEta = busCards.firstOrNull()?.let { card ->
+                                    if (index == nearestIndex) card.etaMinutes else null
+                                },
+                                selectedBusEta = if (index == selectedIndex && index != nearestIndex) {
+                                    busCards.firstOrNull()?.let { card ->
+                                        val transit = (card.currentStationIndex until index).sumOf { i ->
+                                            stationList[i].segmentTimeSeconds
+                                        }
+                                        (card.etaMinutes * 60 + transit) / 60
                                     }
-                                    (card.etaMinutes * 60 + transit) / 60
-                                }
-                            } else null,
-                            onSelect = {
-                                selectedIndex = if (selectedIndex == index) nearestIndex else index
-                                selectedBusStationIndex = null
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
+                                } else null,
+                                onSelect = {
+                                    selectedIndex = if (selectedIndex == index) nearestIndex else index
+                                    selectedBusStationIndex = null
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+
+                        val departedBuses = station.buses.filter { !it.isArriving }
+                        if (departedBuses.isNotEmpty() && index < stationList.lastIndex) {
+                            item(key = "bus_departed_$index") {
+                                BusOnTrackRow(
+                                    buses = departedBuses,
+                                    isArriving = false,
+                                    trackColor = congestionColor(
+                                        station.congestion,
+                                        if (isPassed) primaryColor else outlineVariantColor,
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
+                        }
                     }
                 }
 

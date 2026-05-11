@@ -104,6 +104,7 @@ data class BusCardData(
     val currentStationName: String,
     val currentStationIndex: Int,
     val isAtStation: Boolean,
+    val isArriving: Boolean,
 )
 
 fun computeBusCards(
@@ -126,6 +127,7 @@ fun computeBusCards(
                     currentStationName = station.name,
                     currentStationIndex = stIdx,
                     isAtStation = bus.isArriving && etaMin <= 0,
+                    isArriving = bus.isArriving,
                 )
             )
         }

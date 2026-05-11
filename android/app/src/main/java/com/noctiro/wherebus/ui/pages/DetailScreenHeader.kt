@@ -409,9 +409,12 @@ private fun BusCard(
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                text = if (isAtStation) "立刻上车"
-                else if (card.etaMinutes <= 0) "即将进站"
-                else "现在：${card.currentStationName}",
+                text = when {
+                    isAtStation -> "立刻上车"
+                    card.etaMinutes <= 0 -> "即将进站"
+                    card.isArriving -> "前往：${card.currentStationName}"
+                    else -> "离开：${card.currentStationName}"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = subtleColor,
                 maxLines = 1,

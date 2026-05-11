@@ -47,6 +47,13 @@ import com.noctiro.wherebus.domain.CongestionLevel
 import com.noctiro.wherebus.domain.StationItemUi
 import com.noctiro.wherebus.ui.components.StopBadge
 
+internal fun congestionColor(level: CongestionLevel?, fallback: Color): Color = when (level) {
+    CongestionLevel.Smooth -> Color(0xFF4CAF50)
+    CongestionLevel.Slow -> Color(0xFFFFA726)
+    CongestionLevel.Congested -> Color(0xFFEF5350)
+    null -> fallback
+}
+
 @Composable
 internal fun StationTimelineRow(
     station: StationItemUi,
@@ -64,13 +71,6 @@ internal fun StationTimelineRow(
     val primaryColor = MaterialTheme.colorScheme.primary
     val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
-
-    fun congestionColor(level: CongestionLevel?, fallback: Color): Color = when (level) {
-        CongestionLevel.Smooth -> Color(0xFF4CAF50)
-        CongestionLevel.Slow -> Color(0xFFFFA726)
-        CongestionLevel.Congested -> Color(0xFFEF5350)
-        null -> fallback
-    }
 
     val trackColor = congestionColor(
         station.prevCongestion,
@@ -215,25 +215,6 @@ internal fun StationTimelineRow(
 
                 if (hasBus) {
                     Spacer(modifier = Modifier.width(6.dp))
-                    @OptIn(ExperimentalLayoutApi::class)
-                    FlowRow(
-                        modifier = Modifier.weight(2f),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
-                    ) {
-                        station.buses.forEach { bus ->
-                            BusIdChip(
-                                busId = bus.busId,
-                                tertiaryColor = tertiaryColor,
-                            )
-                        }
-                        EtaBadge(
-                            text = "在站",
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                            showBusIcon = true,
-                        )
-                    }
                 } else when {
                     isNearest && nearestBusEta != null -> {
                         Spacer(modifier = Modifier.width(6.dp))
@@ -325,6 +306,62 @@ private fun BusIdChip(
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onTertiary,
             )
+        }
+    }
+}
+
+@Composable
+internal fun BusOnTrackRow(
+    buses: List<com.noctiro.wherebus.domain.BusItemUi>,
+    isArriving: Boolean,
+    trackColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(28.dp)
+                .fillMaxHeight(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .align(Alignment.TopCenter)
+                    .background(trackColor),
+            )
+            Icon(
+                imageVector = Icons.Default.DirectionsBus,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(18.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(tertiaryColor)
+                    .padding(2.dp),
+                tint = MaterialTheme.colorScheme.onTertiary,
+            )
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 4.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            buses.forEach { bus ->
+                BusIdChip(busId = bus.busId, tertiaryColor = tertiaryColor)
+            }
         }
     }
 }

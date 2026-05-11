@@ -152,7 +152,7 @@ fun EmptyStateCard(
             .padding(horizontal = 16.dp),
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

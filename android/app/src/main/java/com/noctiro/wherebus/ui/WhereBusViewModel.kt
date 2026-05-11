@@ -8,6 +8,8 @@ import com.noctiro.wherebus.data.AndroidLocationProvider
 import com.noctiro.wherebus.data.CruxRuntime
 import com.noctiro.wherebus.data.CruxUserEvent
 import com.noctiro.wherebus.data.PlatformPermissionRequester
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,6 +38,9 @@ class WhereBusViewModel(
     private val _navEvents = MutableSharedFlow<NavigationEvent>(extraBufferCapacity = 1)
     val navEvents: SharedFlow<NavigationEvent> = _navEvents.asSharedFlow()
 
+    private var autoRefreshJob: Job? = null
+    private var nearbyRefreshJob: Job? = null
+
     init {
         dispatch(WhereBusAction.Initialize)
     }
@@ -44,6 +49,7 @@ class WhereBusViewModel(
         when (action) {
             WhereBusAction.Initialize -> viewModelScope.launch {
                 syncFromCore(cruxRuntime.start())
+                startNearbyRefresh()
             }
             WhereBusAction.MarkOnboardingDone -> emit(CruxUserEvent.WelcomeStart)
             WhereBusAction.RequestLocationPermission -> emit(CruxUserEvent.WelcomeRequestLocation)
@@ -148,6 +154,42 @@ class WhereBusViewModel(
         }
     }
 
+    private fun startAutoRefresh() {
+        if (autoRefreshJob?.isActive == true) return
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(AUTO_REFRESH_INTERVAL_MS)
+                if (_uiState.value.showDetail) {
+                    syncFromCore(cruxRuntime.dispatch(CruxUserEvent.DetailRefresh))
+                } else {
+                    break
+                }
+            }
+        }
+    }
+
+    private fun stopAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
+    }
+
+    private fun startNearbyRefresh() {
+        if (nearbyRefreshJob?.isActive == true) return
+        nearbyRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(NEARBY_REFRESH_INTERVAL_MS)
+                if (!_uiState.value.showDetail) {
+                    syncFromCore(cruxRuntime.dispatch(CruxUserEvent.NearbyRefresh))
+                }
+            }
+        }
+    }
+
+    private fun stopNearbyRefresh() {
+        nearbyRefreshJob?.cancel()
+        nearbyRefreshJob = null
+    }
+
     private fun syncFromCore(view: com.noctiro.wherebus.data.NativeAppView) {
         val previous = _uiState.value
         val newFeedback = if (view.settings_status.isNotBlank() && view.settings_status != previous.lastShownSettingsStatus) {
@@ -165,8 +207,10 @@ class WhereBusViewModel(
 
         if (newState.showDetail && !previous.showDetail) {
             _navEvents.tryEmit(NavigationEvent.ToDetail)
+            startAutoRefresh()
         } else if (!newState.showDetail && previous.showDetail) {
             _navEvents.tryEmit(NavigationEvent.PopDetail)
+            stopAutoRefresh()
         }
 
         if (newState.showCityPicker && !previous.showCityPicker) {
@@ -183,6 +227,9 @@ class WhereBusViewModel(
     }
 
     companion object {
+        private const val AUTO_REFRESH_INTERVAL_MS = 10_000L
+        private const val NEARBY_REFRESH_INTERVAL_MS = 30_000L
+
         fun factory(
             context: Context,
             permissionRequester: PlatformPermissionRequester,

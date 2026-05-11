@@ -271,7 +271,7 @@ private fun BusCard(
     onClick: () -> Unit,
 ) {
     val isAtStation = card.isAtStation
-    val isApproaching = !isAtStation && card.etaMinutes in 1..15
+    val isApproaching = !isAtStation && card.etaMinutes in 0..15
     val isFar = !isAtStation && card.etaMinutes > 15
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -380,6 +380,13 @@ private fun BusCard(
                     fontWeight = FontWeight.SemiBold,
                     color = contentColor,
                 )
+            } else if (card.etaMinutes <= 0) {
+                Text(
+                    text = "即将到站",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                )
             } else {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
@@ -403,6 +410,7 @@ private fun BusCard(
 
             Text(
                 text = if (isAtStation) "立刻上车"
+                else if (card.etaMinutes <= 0) "即将进站"
                 else "现在：${card.currentStationName}",
                 style = MaterialTheme.typography.labelSmall,
                 color = subtleColor,

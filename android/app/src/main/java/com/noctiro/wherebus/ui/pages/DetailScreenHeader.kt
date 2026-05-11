@@ -18,7 +18,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -229,8 +228,7 @@ private fun BusCardsRow(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(112.dp),
+            .fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
@@ -255,7 +253,7 @@ private fun BusCardsRow(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .width(32.dp)
-                    .height(112.dp)
+                    .matchParentSize()
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(Color.Transparent, surfaceColor),
@@ -342,7 +340,6 @@ private fun BusCard(
     Surface(
         modifier = Modifier
             .width(148.dp)
-            .height(IntrinsicSize.Min)
             .then(
                 if (isAtStation) Modifier.shadow(pulseShadow.dp, RoundedCornerShape(14.dp))
                 else Modifier
@@ -360,9 +357,11 @@ private fun BusCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = card.busId.takeLast(5).ifBlank { "—" },
+                    text = card.busId.ifBlank { "—" },
                     style = MaterialTheme.typography.labelSmall,
                     color = subtleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Box(
                     modifier = Modifier
@@ -372,7 +371,7 @@ private fun BusCard(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (isAtStation) {
                 Text(

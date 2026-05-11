@@ -6,6 +6,8 @@ use crate::models::City;
 use crate::provider::{ProviderError, BusDataProvider};
 use crate::domain::transit::{Station, LineSummary, LineDetail, RealTimeData, BusRoute};
 
+#[cfg(debug_assertions)]
+use super::debug;
 use super::{chelaile, mygolbs};
 
 #[derive(Clone, Debug)]
@@ -31,12 +33,24 @@ pub fn available_services() -> Vec<ServiceEntry> {
         provider: "车来了",
     }));
 
+    #[cfg(debug_assertions)]
+    services.push(ServiceEntry {
+        id: debug::SERVICE_ID,
+        city: City::Beijing,
+        provider: "Debug",
+    });
+
     services
 }
 
 pub fn create_provider(service_id: &str) -> Arc<dyn BusDataProvider> {
     if service_id.is_empty() {
         return Arc::new(NullProvider);
+    }
+
+    #[cfg(debug_assertions)]
+    if service_id == debug::SERVICE_ID {
+        return Arc::new(debug::DebugProvider);
     }
 
     if let Some(city) = chelaile::cities::CITIES

@@ -1,4 +1,6 @@
 pub(crate) mod chelaile;
+#[cfg(debug_assertions)]
+pub(crate) mod debug;
 pub(crate) mod mygolbs;
 pub(crate) mod registry;
 

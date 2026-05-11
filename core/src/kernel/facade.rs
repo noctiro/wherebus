@@ -24,6 +24,7 @@ const DETAIL_CAP: usize = 30;
 const ALL_LINES_CAP: usize = 3;
 
 pub struct RuntimeFacade {
+    service_id: String,
     inner: Arc<dyn BusDataProvider>,
     stations: Arc<TypedCache<Vec<Station>>>,
     lines: Arc<TypedCache<Vec<LineSummary>>>,
@@ -39,6 +40,7 @@ impl RuntimeFacade {
         let config = storage.load_config().unwrap_or_default();
         let provider = providers::create_provider(&config.service_id);
         Ok(Self {
+            service_id: config.service_id,
             inner: provider,
             stations: Arc::new(TypedCache::new(STATIONS_TTL, STATIONS_CAP)),
             lines: Arc::new(TypedCache::new(LINES_TTL, LINES_CAP)),
@@ -52,6 +54,7 @@ impl RuntimeFacade {
     pub fn switch_provider(&self, service_id: &str) -> Arc<Self> {
         let provider = providers::create_provider(service_id);
         Arc::new(Self {
+            service_id: service_id.to_string(),
             inner: provider,
             stations: Arc::new(TypedCache::new(STATIONS_TTL, STATIONS_CAP)),
             lines: Arc::new(TypedCache::new(LINES_TTL, LINES_CAP)),
@@ -480,7 +483,9 @@ impl RuntimeFacade {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, ProviderError>>,
     {
-        if let Some(data) = self.storage.get_cached::<T>(table, key, ttl) {
+        let storage_key = format!("{}:{}", self.service_id, key);
+
+        if let Some(data) = self.storage.get_cached::<T>(table, &storage_key, ttl) {
             cache.insert(key.to_owned(), data.clone());
             return Ok(data);
         }
@@ -495,7 +500,7 @@ impl RuntimeFacade {
 
         if !self.connectivity.should_attempt() {
             cache.complete_pending(key);
-            if let Some(stale) = self.storage.get_stale::<T>(table, key) {
+            if let Some(stale) = self.storage.get_stale::<T>(table, &storage_key) {
                 cache.insert(key.to_owned(), stale.clone());
                 return Ok(stale);
             }
@@ -509,17 +514,17 @@ impl RuntimeFacade {
             Ok(data) => {
                 cache.insert(key.to_owned(), data.clone());
                 let storage = self.storage.clone();
-                let k = key.to_owned();
+                let sk = storage_key;
                 let d = data.clone();
                 tokio::spawn(async move {
-                    let _ = storage.put_cached(table, &k, &d);
+                    let _ = storage.put_cached(table, &sk, &d);
                 });
                 cache.complete_pending(key);
                 Ok(data)
             }
             Err(e) => {
                 cache.complete_pending(key);
-                if let Some(stale) = self.storage.get_stale::<T>(table, key) {
+                if let Some(stale) = self.storage.get_stale::<T>(table, &storage_key) {
                     cache.insert(key.to_owned(), stale.clone());
                     return Ok(stale);
                 }
@@ -543,9 +548,10 @@ impl RuntimeFacade {
             return;
         }
         let storage = self.storage.clone();
+        let storage_key = format!("{}:{}", self.service_id, key);
         tokio::spawn(async move {
             if let Ok(data) = (fetch)().await {
-                let _ = storage.put_cached(table, &key, &data);
+                let _ = storage.put_cached(table, &storage_key, &data);
                 cache.insert(key.clone(), data);
             }
             cache.complete_pending(&key);

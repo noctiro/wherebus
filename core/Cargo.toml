@@ -3,17 +3,22 @@ name = "wherebus"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+typegen = []
+
 [lib]
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 anyhow = "1"
-crux_core = "0.17.0"
+crux_core = "0.18.0"
 dirs = "6"
 async-trait = "0.1.89"
 futures = "0.3"
 redb = "4"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.13.3", default-features = false, features = ["json", "rustls-no-provider", "query", "form"] }
+rustls = "0.23"
+webpki-roots = "1.0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
@@ -26,3 +31,4 @@ ecb = { version = "0.2", features = ["alloc"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"] }
 tracing-android = "0.2"
 zstd = "0.13"
+jni = { version = "0.22", default-features = false }

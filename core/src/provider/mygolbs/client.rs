@@ -11,9 +11,17 @@ pub struct GolbsClient {
 
 impl GolbsClient {
     pub fn new(city: CityConfig) -> Result<Self, ProviderError> {
+        let root_store = rustls::RootCertStore::from_iter(
+            webpki_roots::TLS_SERVER_ROOTS.iter().cloned(),
+        );
+        let tls = rustls::ClientConfig::builder()
+            .with_root_certificates(root_store)
+            .with_no_client_auth();
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
             .user_agent("Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            .use_preconfigured_tls(tls)
             .build()
             .map_err(|e| ProviderError::Network(e.to_string()))?;
         Ok(Self { client, city })

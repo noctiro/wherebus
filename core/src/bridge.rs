@@ -1,6 +1,4 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_void};
 use std::sync::{Mutex, OnceLock};
 
 use crux_core::Core;
@@ -532,225 +530,16 @@ fn nearby_to_dto(snapshot: crate::domain::NearbySnapshot) -> NearbyData {
 }
 
 
-#[allow(non_camel_case_types)]
-type jboolean = u8;
-#[allow(non_camel_case_types)]
-type jint = i32;
-#[allow(non_camel_case_types)]
-type jobject = *mut c_void;
-#[allow(non_camel_case_types)]
-type jclass = jobject;
-#[allow(non_camel_case_types)]
-type jstring = jobject;
-
-type JNIEnv = *const JNINativeInterface;
-
-#[repr(C)]
-pub struct JNINativeInterface {
-    reserved0: *mut c_void,
-    reserved1: *mut c_void,
-    reserved2: *mut c_void,
-    reserved3: *mut c_void,
-    get_version: unsafe extern "system" fn(env: *mut JNIEnv) -> jint,
-    define_class: *mut c_void,
-    find_class: *mut c_void,
-    from_reflected_method: *mut c_void,
-    from_reflected_field: *mut c_void,
-    to_reflected_method: *mut c_void,
-    get_superclass: *mut c_void,
-    is_assignable_from: *mut c_void,
-    to_reflected_field: *mut c_void,
-    throw: *mut c_void,
-    throw_new: *mut c_void,
-    exception_occurred: *mut c_void,
-    exception_describe: *mut c_void,
-    exception_clear: *mut c_void,
-    fatal_error: *mut c_void,
-    push_local_frame: *mut c_void,
-    pop_local_frame: *mut c_void,
-    new_global_ref: *mut c_void,
-    delete_global_ref: *mut c_void,
-    delete_local_ref: *mut c_void,
-    is_same_object: *mut c_void,
-    new_local_ref: *mut c_void,
-    ensure_local_capacity: *mut c_void,
-    alloc_object: *mut c_void,
-    new_object: *mut c_void,
-    new_object_v: *mut c_void,
-    new_object_a: *mut c_void,
-    get_object_class: *mut c_void,
-    is_instance_of: *mut c_void,
-    get_method_id: *mut c_void,
-    call_object_method: *mut c_void,
-    call_object_method_v: *mut c_void,
-    call_object_method_a: *mut c_void,
-    call_boolean_method: *mut c_void,
-    call_boolean_method_v: *mut c_void,
-    call_boolean_method_a: *mut c_void,
-    call_byte_method: *mut c_void,
-    call_byte_method_v: *mut c_void,
-    call_byte_method_a: *mut c_void,
-    call_char_method: *mut c_void,
-    call_char_method_v: *mut c_void,
-    call_char_method_a: *mut c_void,
-    call_short_method: *mut c_void,
-    call_short_method_v: *mut c_void,
-    call_short_method_a: *mut c_void,
-    call_int_method: *mut c_void,
-    call_int_method_v: *mut c_void,
-    call_int_method_a: *mut c_void,
-    call_long_method: *mut c_void,
-    call_long_method_v: *mut c_void,
-    call_long_method_a: *mut c_void,
-    call_float_method: *mut c_void,
-    call_float_method_v: *mut c_void,
-    call_float_method_a: *mut c_void,
-    call_double_method: *mut c_void,
-    call_double_method_v: *mut c_void,
-    call_double_method_a: *mut c_void,
-    call_void_method: *mut c_void,
-    call_void_method_v: *mut c_void,
-    call_void_method_a: *mut c_void,
-    call_nonvirtual_object_method: *mut c_void,
-    call_nonvirtual_object_method_v: *mut c_void,
-    call_nonvirtual_object_method_a: *mut c_void,
-    call_nonvirtual_boolean_method: *mut c_void,
-    call_nonvirtual_boolean_method_v: *mut c_void,
-    call_nonvirtual_boolean_method_a: *mut c_void,
-    call_nonvirtual_byte_method: *mut c_void,
-    call_nonvirtual_byte_method_v: *mut c_void,
-    call_nonvirtual_byte_method_a: *mut c_void,
-    call_nonvirtual_char_method: *mut c_void,
-    call_nonvirtual_char_method_v: *mut c_void,
-    call_nonvirtual_char_method_a: *mut c_void,
-    call_nonvirtual_short_method: *mut c_void,
-    call_nonvirtual_short_method_v: *mut c_void,
-    call_nonvirtual_short_method_a: *mut c_void,
-    call_nonvirtual_int_method: *mut c_void,
-    call_nonvirtual_int_method_v: *mut c_void,
-    call_nonvirtual_int_method_a: *mut c_void,
-    call_nonvirtual_long_method: *mut c_void,
-    call_nonvirtual_long_method_v: *mut c_void,
-    call_nonvirtual_long_method_a: *mut c_void,
-    call_nonvirtual_float_method: *mut c_void,
-    call_nonvirtual_float_method_v: *mut c_void,
-    call_nonvirtual_float_method_a: *mut c_void,
-    call_nonvirtual_double_method: *mut c_void,
-    call_nonvirtual_double_method_v: *mut c_void,
-    call_nonvirtual_double_method_a: *mut c_void,
-    call_nonvirtual_void_method: *mut c_void,
-    call_nonvirtual_void_method_v: *mut c_void,
-    call_nonvirtual_void_method_a: *mut c_void,
-    get_field_id: *mut c_void,
-    get_object_field: *mut c_void,
-    get_boolean_field: *mut c_void,
-    get_byte_field: *mut c_void,
-    get_char_field: *mut c_void,
-    get_short_field: *mut c_void,
-    get_int_field: *mut c_void,
-    get_long_field: *mut c_void,
-    get_float_field: *mut c_void,
-    get_double_field: *mut c_void,
-    set_object_field: *mut c_void,
-    set_boolean_field: *mut c_void,
-    set_byte_field: *mut c_void,
-    set_char_field: *mut c_void,
-    set_short_field: *mut c_void,
-    set_int_field: *mut c_void,
-    set_long_field: *mut c_void,
-    set_float_field: *mut c_void,
-    set_double_field: *mut c_void,
-    get_static_method_id: *mut c_void,
-    call_static_object_method: *mut c_void,
-    call_static_object_method_v: *mut c_void,
-    call_static_object_method_a: *mut c_void,
-    call_static_boolean_method: *mut c_void,
-    call_static_boolean_method_v: *mut c_void,
-    call_static_boolean_method_a: *mut c_void,
-    call_static_byte_method: *mut c_void,
-    call_static_byte_method_v: *mut c_void,
-    call_static_byte_method_a: *mut c_void,
-    call_static_char_method: *mut c_void,
-    call_static_char_method_v: *mut c_void,
-    call_static_char_method_a: *mut c_void,
-    call_static_short_method: *mut c_void,
-    call_static_short_method_v: *mut c_void,
-    call_static_short_method_a: *mut c_void,
-    call_static_int_method: *mut c_void,
-    call_static_int_method_v: *mut c_void,
-    call_static_int_method_a: *mut c_void,
-    call_static_long_method: *mut c_void,
-    call_static_long_method_v: *mut c_void,
-    call_static_long_method_a: *mut c_void,
-    call_static_float_method: *mut c_void,
-    call_static_float_method_v: *mut c_void,
-    call_static_float_method_a: *mut c_void,
-    call_static_double_method: *mut c_void,
-    call_static_double_method_v: *mut c_void,
-    call_static_double_method_a: *mut c_void,
-    call_static_void_method: *mut c_void,
-    call_static_void_method_v: *mut c_void,
-    call_static_void_method_a: *mut c_void,
-    get_static_field_id: *mut c_void,
-    get_static_object_field: *mut c_void,
-    get_static_boolean_field: *mut c_void,
-    get_static_byte_field: *mut c_void,
-    get_static_char_field: *mut c_void,
-    get_static_short_field: *mut c_void,
-    get_static_int_field: *mut c_void,
-    get_static_long_field: *mut c_void,
-    get_static_float_field: *mut c_void,
-    get_static_double_field: *mut c_void,
-    set_static_object_field: *mut c_void,
-    set_static_boolean_field: *mut c_void,
-    set_static_byte_field: *mut c_void,
-    set_static_char_field: *mut c_void,
-    set_static_short_field: *mut c_void,
-    set_static_int_field: *mut c_void,
-    set_static_long_field: *mut c_void,
-    set_static_float_field: *mut c_void,
-    set_static_double_field: *mut c_void,
-    new_string: *mut c_void,
-    get_string_length: *mut c_void,
-    get_string_chars: *mut c_void,
-    release_string_chars: *mut c_void,
-    new_string_utf: unsafe extern "system" fn(env: *mut JNIEnv, utf: *const c_char) -> jstring,
-    get_string_utf_length: *mut c_void,
-    get_string_utf_chars: unsafe extern "system" fn(
-        env: *mut JNIEnv,
-        string: jstring,
-        is_copy: *mut jboolean,
-    ) -> *const c_char,
-    release_string_utf_chars:
-        unsafe extern "system" fn(env: *mut JNIEnv, string: jstring, chars: *const c_char),
-}
-
-unsafe fn jstring_to_string(env: *mut JNIEnv, input: jstring) -> Result<String, String> {
-    if input.is_null() {
-        return Ok(String::new());
-    }
-    let chars = unsafe { ((**env).get_string_utf_chars)(env, input, std::ptr::null_mut()) };
-    if chars.is_null() {
-        return Err("failed to read Java string".into());
-    }
-    let value = unsafe { CStr::from_ptr(chars) }.to_string_lossy().into_owned();
-    unsafe {
-        ((**env).release_string_utf_chars)(env, input, chars);
-    }
-    Ok(value)
-}
-
-unsafe fn string_to_jstring(env: *mut JNIEnv, value: &str) -> jstring {
-    let sanitized = value.replace('\0', "\\u0000");
-    let c_string = CString::new(sanitized).expect("jni string");
-    unsafe { ((**env).new_string_utf)(env, c_string.as_ptr()) }
-}
+use jni::EnvUnowned;
+use jni::errors::ThrowRuntimeExAndDefault;
+use jni::objects::{JClass, JString};
+use jni::sys::jint;
 
 #[unsafe(no_mangle)]
-pub unsafe extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_setDataDir(
-    env: *mut JNIEnv,
-    _class: jclass,
-    path: jstring,
+pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_setDataDir<'local>(
+    mut unowned_env: EnvUnowned<'local>,
+    _class: JClass<'local>,
+    path: JString<'local>,
 ) {
     use std::sync::Once;
     static INIT_TRACING: Once = Once::new();
@@ -765,41 +554,49 @@ pub unsafe extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridg
         }
     });
 
-    if let Ok(path) = unsafe { jstring_to_string(env, path) } {
+    unowned_env.with_env(|env| -> jni::errors::Result<()> {
+        let path = path.try_to_string(env)?;
         if !path.is_empty() {
             set_android_data_dir(path);
         }
-    }
+        Ok(())
+    }).resolve::<ThrowRuntimeExAndDefault>();
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_update(
-    env: *mut JNIEnv,
-    _class: jclass,
-    event_json: jstring,
-) -> jstring {
-    let event_json = unsafe { jstring_to_string(env, event_json) }.unwrap_or_default();
-    let response = bridge_update_json(&event_json);
-    unsafe { string_to_jstring(env, &response) }
+pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_update<'local>(
+    mut unowned_env: EnvUnowned<'local>,
+    _class: JClass<'local>,
+    event_json: JString<'local>,
+) -> JString<'local> {
+    unowned_env.with_env(|env| {
+        let event_json = event_json.try_to_string(env)?;
+        let response = bridge_update_json(&event_json);
+        JString::from_str(env, &response)
+    }).resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_resolve(
-    env: *mut JNIEnv,
-    _class: jclass,
+pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_resolve<'local>(
+    mut unowned_env: EnvUnowned<'local>,
+    _class: JClass<'local>,
     effect_id: jint,
-    response_json: jstring,
-) -> jstring {
-    let response_json = unsafe { jstring_to_string(env, response_json) }.unwrap_or_default();
-    let response = bridge_resolve_json(effect_id as u32, &response_json);
-    unsafe { string_to_jstring(env, &response) }
+    response_json: JString<'local>,
+) -> JString<'local> {
+    unowned_env.with_env(|env| {
+        let response_json = response_json.try_to_string(env)?;
+        let response = bridge_resolve_json(effect_id as u32, &response_json);
+        JString::from_str(env, &response)
+    }).resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_view(
-    env: *mut JNIEnv,
-    _class: jclass,
-) -> jstring {
-    let response = bridge_view_json();
-    unsafe { string_to_jstring(env, &response) }
+pub extern "system" fn Java_com_noctiro_wherebus_data_NativeWhereBusBridge_view<'local>(
+    mut unowned_env: EnvUnowned<'local>,
+    _class: JClass<'local>,
+) -> JString<'local> {
+    unowned_env.with_env(|env| {
+        let response = bridge_view_json();
+        JString::from_str(env, &response)
+    }).resolve::<ThrowRuntimeExAndDefault>()
 }

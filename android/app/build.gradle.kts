@@ -4,9 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-import java.io.File
-import org.gradle.api.tasks.Exec
-
 android {
     namespace = "com.noctiro.wherebus"
     compileSdk {
@@ -53,6 +50,10 @@ android {
     sourceSets {
         getByName("main").jniLibs.srcDirs(layout.buildDirectory.dir("rustJniLibs").get().asFile)
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 val rustTargetByAbi = mapOf(

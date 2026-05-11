@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::{Duration, Instant};
+
+use lru::LruCache;
+use parking_lot::Mutex;
+use std::num::NonZeroUsize;
 use tokio::sync::Notify;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,9 +38,8 @@ impl<T: Clone> CacheEntry<T> {
 }
 
 pub struct TypedCache<T> {
-    entries: Mutex<HashMap<String, CacheEntry<T>>>,
+    entries: Mutex<LruCache<String, CacheEntry<T>>>,
     pending: Mutex<HashMap<String, Arc<Notify>>>,
-    max_entries: usize,
     ttl: Duration,
 }
 
@@ -49,15 +51,16 @@ pub struct CacheResult<T> {
 impl<T: Clone + Send + 'static> TypedCache<T> {
     pub fn new(ttl: Duration, max_entries: usize) -> Self {
         Self {
-            entries: Mutex::new(HashMap::new()),
+            entries: Mutex::new(LruCache::new(
+                NonZeroUsize::new(max_entries).expect("max_entries must be > 0"),
+            )),
             pending: Mutex::new(HashMap::new()),
-            max_entries,
             ttl,
         }
     }
 
     pub fn get(&self, key: &str) -> Option<CacheResult<T>> {
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = self.entries.lock();
         let entry = entries.get_mut(key)?;
         entry.last_accessed = Instant::now();
         Some(CacheResult {
@@ -67,20 +70,17 @@ impl<T: Clone + Send + 'static> TypedCache<T> {
     }
 
     pub fn needs_refresh(&self, key: &str) -> bool {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.entries.lock();
         entries
-            .get(key)
+            .peek(key)
             .map(|e| e.needs_bg_refresh(self.ttl))
             .unwrap_or(true)
     }
 
     pub fn insert(&self, key: String, data: T) {
-        let mut entries = self.entries.lock().unwrap();
-        if entries.len() >= self.max_entries && !entries.contains_key(&key) {
-            evict_lru(&mut entries);
-        }
+        let mut entries = self.entries.lock();
         let now = Instant::now();
-        entries.insert(
+        entries.push(
             key,
             CacheEntry {
                 data,
@@ -91,18 +91,16 @@ impl<T: Clone + Send + 'static> TypedCache<T> {
     }
 
     pub fn invalidate(&self, key: &str) {
-        self.entries.lock().unwrap().remove(key);
+        self.entries.lock().pop(key);
     }
 
     pub fn clear(&self) {
-        self.entries.lock().unwrap().clear();
-        self.pending.lock().unwrap().clear();
+        self.entries.lock().clear();
+        self.pending.lock().clear();
     }
 
-    /// Returns Some(notify) if another request is already in-flight for this key.
-    /// Returns None if this caller should perform the fetch (it registered itself).
     pub fn register_pending(&self, key: &str) -> Option<Arc<Notify>> {
-        let mut pending = self.pending.lock().unwrap();
+        let mut pending = self.pending.lock();
         if let Some(existing) = pending.get(key) {
             Some(existing.clone())
         } else {
@@ -112,19 +110,10 @@ impl<T: Clone + Send + 'static> TypedCache<T> {
     }
 
     pub fn complete_pending(&self, key: &str) {
-        let mut pending = self.pending.lock().unwrap();
+        let mut pending = self.pending.lock();
         if let Some(notify) = pending.remove(key) {
             notify.notify_waiters();
         }
     }
 }
 
-fn evict_lru<T>(entries: &mut HashMap<String, CacheEntry<T>>) {
-    if let Some(lru_key) = entries
-        .iter()
-        .min_by_key(|(_, e)| e.last_accessed)
-        .map(|(k, _)| k.clone())
-    {
-        entries.remove(&lru_key);
-    }
-}

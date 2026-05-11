@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
-use std::sync::Mutex;
 use std::time::Instant;
+
+use parking_lot::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetState {
@@ -34,7 +35,7 @@ impl ConnectivityTracker {
     }
 
     pub fn record(&self, success: bool) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         if inner.recent.len() >= WINDOW_SIZE {
             inner.recent.pop_front();
         }
@@ -46,7 +47,7 @@ impl ConnectivityTracker {
     }
 
     pub fn state(&self) -> NetState {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         if inner.recent.len() < 3 {
             return NetState::Online;
         }
@@ -64,8 +65,9 @@ impl ConnectivityTracker {
     }
 
     pub fn should_attempt(&self) -> bool {
-        let inner = self.inner.lock().unwrap();
-        match self.state_from(&inner) {
+        let inner = self.inner.lock();
+        let state = Self::state_inner(&inner);
+        match state {
             NetState::Online | NetState::Degraded => true,
             NetState::Offline => inner
                 .last_attempt
@@ -74,7 +76,7 @@ impl ConnectivityTracker {
         }
     }
 
-    fn state_from(&self, inner: &Inner) -> NetState {
+    fn state_inner(inner: &Inner) -> NetState {
         if inner.recent.len() < 3 {
             return NetState::Online;
         }

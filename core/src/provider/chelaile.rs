@@ -7,7 +7,7 @@ use crate::providers::{BusDataProvider, ProviderError};
 use async_trait::async_trait;
 use client::ChelaileClient;
 use raw::NearbyResponse;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 pub struct ChelaileProvider {
     client: ChelaileClient,
@@ -156,7 +156,7 @@ impl BusDataProvider for ChelaileProvider {
                 same_name_count: 0,
             })
             .collect();
-        *self.cached_nearby.lock().unwrap() = Some(resp);
+        *self.cached_nearby.lock() = Some(resp);
         Ok(stations)
     }
 
@@ -167,7 +167,7 @@ impl BusDataProvider for ChelaileProvider {
         lng: f64,
     ) -> Result<Vec<LineSummary>, ProviderError> {
         let resp = {
-            let cached = self.cached_nearby.lock().unwrap();
+            let cached = self.cached_nearby.lock();
             cached.clone()
         };
 

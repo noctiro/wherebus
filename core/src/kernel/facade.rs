@@ -185,7 +185,7 @@ impl RuntimeFacade {
             .collect();
         let results = futures::future::join_all(futs).await;
 
-        let all_routes = self.all_lines.get(&"all".to_string());
+        let all_routes = self.all_lines.get("all");
 
         let mut groups = Vec::new();
         for (station, result) in stations_to_fetch.into_iter().zip(results) {
@@ -436,17 +436,17 @@ impl RuntimeFacade {
     }
 
     pub async fn all_lines(&self) -> Result<Vec<BusRoute>, ProviderError> {
-        let key = "all".to_string();
+        let key = "all";
 
-        if let Some(cached) = self.all_lines.get(&key) {
-            if cached.freshness == Freshness::Fresh && !self.all_lines.needs_refresh(&key) {
+        if let Some(cached) = self.all_lines.get(key) {
+            if cached.freshness == Freshness::Fresh && !self.all_lines.needs_refresh(key) {
                 return Ok(cached.data);
             }
             let inner = self.inner.clone();
             let conn = self.connectivity.clone();
             self.bg_refresh(
                 self.all_lines.clone(),
-                key.clone(),
+                key.to_string(),
                 tables::ALL_LINES_TABLE,
                 move || async move {
                     let r = inner.all_lines().await;
@@ -459,7 +459,7 @@ impl RuntimeFacade {
 
         self.fetch_or_wait(
             &self.all_lines,
-            &key,
+            key,
             tables::ALL_LINES_TABLE,
             ALL_LINES_TTL,
             || self.inner.all_lines(),
@@ -480,9 +480,8 @@ impl RuntimeFacade {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, ProviderError>>,
     {
-        // Check redb (fresh) before network
         if let Some(data) = self.storage.get_cached::<T>(table, key, ttl) {
-            cache.insert(key.to_string(), data.clone());
+            cache.insert(key.to_owned(), data.clone());
             return Ok(data);
         }
 
@@ -496,9 +495,8 @@ impl RuntimeFacade {
 
         if !self.connectivity.should_attempt() {
             cache.complete_pending(key);
-            // Offline fallback: serve stale from redb
             if let Some(stale) = self.storage.get_stale::<T>(table, key) {
-                cache.insert(key.to_string(), stale.clone());
+                cache.insert(key.to_owned(), stale.clone());
                 return Ok(stale);
             }
             return Err(ProviderError::Network("离线".to_string()));
@@ -509,10 +507,9 @@ impl RuntimeFacade {
 
         match result {
             Ok(data) => {
-                cache.insert(key.to_string(), data.clone());
-                // Write-through to redb (async)
+                cache.insert(key.to_owned(), data.clone());
                 let storage = self.storage.clone();
-                let k = key.to_string();
+                let k = key.to_owned();
                 let d = data.clone();
                 tokio::spawn(async move {
                     let _ = storage.put_cached(table, &k, &d);
@@ -522,9 +519,8 @@ impl RuntimeFacade {
             }
             Err(e) => {
                 cache.complete_pending(key);
-                // Serve stale on network error
                 if let Some(stale) = self.storage.get_stale::<T>(table, key) {
-                    cache.insert(key.to_string(), stale.clone());
+                    cache.insert(key.to_owned(), stale.clone());
                     return Ok(stale);
                 }
                 Err(e)

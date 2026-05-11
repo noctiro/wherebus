@@ -1,7 +1,9 @@
 pub mod manage;
 pub mod query;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
 
 use async_trait::async_trait;
 
@@ -29,12 +31,12 @@ impl Services {
 
 impl Services {
     fn with_inner<R>(&self, f: impl FnOnce(&RuntimeFacade) -> R) -> R {
-        let guard = self.inner.lock().unwrap();
+        let guard = self.inner.lock();
         f(&guard)
     }
 
     fn clone_inner(&self) -> Arc<RuntimeFacade> {
-        self.inner.lock().unwrap().clone()
+        self.inner.lock().clone()
     }
 }
 
@@ -113,7 +115,7 @@ impl ManageService for Services {
         config.service_id = service_id.to_string();
         let _ = next.save_config(&config);
         let info = ServiceInfo::from(next.current_service());
-        *self.inner.lock().unwrap() = next;
+        *self.inner.lock() = next;
         Ok(info)
     }
 
